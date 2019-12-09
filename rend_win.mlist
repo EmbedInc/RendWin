@@ -1,0 +1,12 @@
+rend_win_admin.obj
+rend_win_events.obj
+rend_win_flush_all.obj
+rend_win_get.obj
+rend_win_init.obj
+rend_win_poly_2dim.obj
+rend_win_rect_2dimi.obj
+rend_win_thread.obj
+rend_win_update_span.obj
+rend_win_util.obj
+rend_win_vect_2dimi.obj
+rend_win_windproc.obj
