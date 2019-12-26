@@ -1,7 +1,10 @@
 {   This is a template for programs to test Windows graphics.
 }
 program "gui" test_win;
-%include 'base.ins.pas';
+%include 'sys.ins.pas';
+%include 'util.ins.pas';
+%include 'string.ins.pas';
+%include 'file.ins.pas';
 %include 'sys_sys2.ins.pas';
 %include 'win.ins.pas';
 %include 'win_keys.ins.pas';
