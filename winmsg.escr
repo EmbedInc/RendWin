@@ -1,0 +1,309 @@
+//   Script to do something for each possible Windows message.
+//
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//   Subroutine DOIT name hexid
+//
+//   Perform the some action for one Windows message.  This routine is intended
+//   to be rewritten as needed for the specific action.
+//
+//   Name is the Windows message name as harvested from the WinUser.h file.  The
+//   leading "WM_" has been removed.  HEXID is the message ID in hex.
+//
+//   Both parameters are bare tokens, not strings.
+//
+subroutine doit
+  var local name string = [qstr [arg 1]] //message name
+  var local id integer = 16#[arg 2] //message ID
+  var local lname string = [lcase name] //lower case message name
+  var local uname string = [ucase name] //upper case message name
+  var local s string
+
+  //////////////////////////////////////
+  //
+  //   Write the WINMSG_xxx_K constant for our WIN_MSG.INS.PAS include file.
+  //
+  if false then
+    set s "    "
+    append s "winmsg_" lname "_k = "
+    append s "16#" [int id "fw 4 lz base 16 usin"] ","
+    show s
+    endif
+
+  //////////////////////////////////////
+  //
+  //   Write the CASE statement line in WIN_SHOW_MESSAGE.INS.PAS to get the text
+  //   name of this message.
+  //
+  if true then
+    set s ""
+    append s "winmsg_" lname "_k: "
+    append s "string_vstring (mname, "
+    append s "'" uname "'(0), -1);"
+    show s
+    endif
+
+  endsub
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//   Call the DOIT subroutine once for each known Windows message.  This list
+//   below was harvested from the WinUser.h include file for Windows 10, on 28
+//   Dec 2019.
+//
+call doit NULL 0000
+call doit CREATE 0001
+call doit DESTROY 0002
+call doit MOVE 0003
+call doit SIZE 0005
+call doit ACTIVATE 0006
+call doit SETFOCUS 0007
+call doit KILLFOCUS 0008
+call doit ENABLE 000A
+call doit SETREDRAW 000B
+call doit SETTEXT 000C
+call doit GETTEXT 000D
+call doit GETTEXTLENGTH 000E
+call doit PAINT 000F
+call doit CLOSE 0010
+call doit QUERYENDSESSION 0011
+call doit QUERYOPEN 0013
+call doit ENDSESSION 0016
+call doit QUIT 0012
+call doit ERASEBKGND 0014
+call doit SYSCOLORCHANGE 0015
+call doit SHOWWINDOW 0018
+call doit WININICHANGE 001A
+call doit DEVMODECHANGE 001B
+call doit ACTIVATEAPP 001C
+call doit FONTCHANGE 001D
+call doit TIMECHANGE 001E
+call doit CANCELMODE 001F
+call doit SETCURSOR 0020
+call doit MOUSEACTIVATE 0021
+call doit CHILDACTIVATE 0022
+call doit QUEUESYNC 0023
+call doit GETMINMAXINFO 0024
+call doit PAINTICON 0026
+call doit ICONERASEBKGND 0027
+call doit NEXTDLGCTL 0028
+call doit SPOOLERSTATUS 002A
+call doit DRAWITEM 002B
+call doit MEASUREITEM 002C
+call doit DELETEITEM 002D
+call doit VKEYTOITEM 002E
+call doit CHARTOITEM 002F
+call doit SETFONT 0030
+call doit GETFONT 0031
+call doit SETHOTKEY 0032
+call doit GETHOTKEY 0033
+call doit QUERYDRAGICON 0037
+call doit COMPAREITEM 0039
+call doit GETOBJECT 003D
+call doit COMPACTING 0041
+call doit COMMNOTIFY 0044
+call doit WINDOWPOSCHANGING 0046
+call doit WINDOWPOSCHANGED 0047
+call doit POWER 0048
+call doit COPYDATA 004A
+call doit CANCELJOURNAL 004B
+call doit NOTIFY 004E
+call doit INPUTLANGCHANGEREQUEST 0050
+call doit INPUTLANGCHANGE 0051
+call doit TCARD 0052
+call doit HELP 0053
+call doit USERCHANGED 0054
+call doit NOTIFYFORMAT 0055
+call doit CONTEXTMENU 007B
+call doit STYLECHANGING 007C
+call doit STYLECHANGED 007D
+call doit DISPLAYCHANGE 007E
+call doit GETICON 007F
+call doit SETICON 0080
+call doit NCCREATE 0081
+call doit NCDESTROY 0082
+call doit NCCALCSIZE 0083
+call doit NCHITTEST 0084
+call doit NCPAINT 0085
+call doit NCACTIVATE 0086
+call doit GETDLGCODE 0087
+call doit SYNCPAINT 0088
+call doit NCMOUSEMOVE 00A0
+call doit NCLBUTTONDOWN 00A1
+call doit NCLBUTTONUP 00A2
+call doit NCLBUTTONDBLCLK 00A3
+call doit NCRBUTTONDOWN 00A4
+call doit NCRBUTTONUP 00A5
+call doit NCRBUTTONDBLCLK 00A6
+call doit NCMBUTTONDOWN 00A7
+call doit NCMBUTTONUP 00A8
+call doit NCMBUTTONDBLCLK 00A9
+call doit NCXBUTTONDOWN 00AB
+call doit NCXBUTTONUP 00AC
+call doit NCXBUTTONDBLCLK 00AD
+call doit INPUT_DEVICE_CHANGE 00FE
+call doit INPUT 00FF
+call doit KEYFIRST 0100
+call doit KEYDOWN 0100
+call doit KEYUP 0101
+call doit CHAR 0102
+call doit DEADCHAR 0103
+call doit SYSKEYDOWN 0104
+call doit SYSKEYUP 0105
+call doit SYSCHAR 0106
+call doit SYSDEADCHAR 0107
+call doit KEYLAST 0108
+call doit UNICHAR 0109
+call doit IME_STARTCOMPOSITION 010D
+call doit IME_ENDCOMPOSITION 010E
+call doit IME_COMPOSITION 010F
+call doit IME_KEYLAST 010F
+call doit INITDIALOG 0110
+call doit COMMAND 0111
+call doit SYSCOMMAND 0112
+call doit TIMER 0113
+call doit HSCROLL 0114
+call doit VSCROLL 0115
+call doit INITMENU 0116
+call doit INITMENUPOPUP 0117
+call doit GESTURE 0119
+call doit GESTURENOTIFY 011A
+call doit MENUSELECT 011F
+call doit MENUCHAR 0120
+call doit ENTERIDLE 0121
+call doit MENURBUTTONUP 0122
+call doit MENUDRAG 0123
+call doit MENUGETOBJECT 0124
+call doit UNINITMENUPOPUP 0125
+call doit MENUCOMMAND 0126
+call doit CHANGEUISTATE 0127
+call doit UPDATEUISTATE 0128
+call doit QUERYUISTATE 0129
+call doit CTLCOLORMSGBOX 0132
+call doit CTLCOLOREDIT 0133
+call doit CTLCOLORLISTBOX 0134
+call doit CTLCOLORBTN 0135
+call doit CTLCOLORDLG 0136
+call doit CTLCOLORSCROLLBAR 0137
+call doit CTLCOLORSTATIC 0138
+call doit MOUSEFIRST 0200
+call doit MOUSEMOVE 0200
+call doit LBUTTONDOWN 0201
+call doit LBUTTONUP 0202
+call doit LBUTTONDBLCLK 0203
+call doit RBUTTONDOWN 0204
+call doit RBUTTONUP 0205
+call doit RBUTTONDBLCLK 0206
+call doit MBUTTONDOWN 0207
+call doit MBUTTONUP 0208
+call doit MBUTTONDBLCLK 0209
+call doit MOUSEWHEEL 020A
+call doit XBUTTONDOWN 020B
+call doit XBUTTONUP 020C
+call doit XBUTTONDBLCLK 020D
+call doit MOUSEHWHEEL 020E
+call doit MOUSELAST 020E
+call doit PARENTNOTIFY 0210
+call doit ENTERMENULOOP 0211
+call doit EXITMENULOOP 0212
+call doit NEXTMENU 0213
+call doit SIZING 0214
+call doit CAPTURECHANGED 0215
+call doit MOVING 0216
+call doit POWERBROADCAST 0218
+call doit DEVICECHANGE 0219
+call doit MDICREATE 0220
+call doit MDIDESTROY 0221
+call doit MDIACTIVATE 0222
+call doit MDIRESTORE 0223
+call doit MDINEXT 0224
+call doit MDIMAXIMIZE 0225
+call doit MDITILE 0226
+call doit MDICASCADE 0227
+call doit MDIICONARRANGE 0228
+call doit MDIGETACTIVE 0229
+call doit MDISETMENU 0230
+call doit ENTERSIZEMOVE 0231
+call doit EXITSIZEMOVE 0232
+call doit DROPFILES 0233
+call doit MDIREFRESHMENU 0234
+call doit POINTERDEVICECHANGE 238
+call doit POINTERDEVICEINRANGE 239
+call doit POINTERDEVICEOUTOFRANGE 23A
+call doit TOUCH 0240
+call doit NCPOINTERUPDATE 0241
+call doit NCPOINTERDOWN 0242
+call doit NCPOINTERUP 0243
+call doit POINTERUPDATE 0245
+call doit POINTERDOWN 0246
+call doit POINTERUP 0247
+call doit POINTERENTER 0249
+call doit POINTERLEAVE 024A
+call doit POINTERACTIVATE 024B
+call doit POINTERCAPTURECHANGED 024C
+call doit TOUCHHITTESTING 024D
+call doit POINTERWHEEL 024E
+call doit POINTERHWHEEL 024F
+call doit POINTERROUTEDTO 0251
+call doit POINTERROUTEDAWAY 0252
+call doit POINTERROUTEDRELEASED 0253
+call doit IME_SETCONTEXT 0281
+call doit IME_NOTIFY 0282
+call doit IME_CONTROL 0283
+call doit IME_COMPOSITIONFULL 0284
+call doit IME_SELECT 0285
+call doit IME_CHAR 0286
+call doit IME_REQUEST 0288
+call doit IME_KEYDOWN 0290
+call doit IME_KEYUP 0291
+call doit MOUSEHOVER 02A1
+call doit MOUSELEAVE 02A3
+call doit NCMOUSEHOVER 02A0
+call doit NCMOUSELEAVE 02A2
+call doit WTSSESSION_CHANGE 02B1
+call doit TABLET_FIRST 02c0
+call doit TABLET_LAST 02df
+call doit DPICHANGED 02E0
+call doit DPICHANGED_BEFOREPARENT 02E2
+call doit DPICHANGED_AFTERPARENT 02E3
+call doit GETDPISCALEDSIZE 02E4
+call doit CUT 0300
+call doit COPY 0301
+call doit PASTE 0302
+call doit CLEAR 0303
+call doit UNDO 0304
+call doit RENDERFORMAT 0305
+call doit RENDERALLFORMATS 0306
+call doit DESTROYCLIPBOARD 0307
+call doit DRAWCLIPBOARD 0308
+call doit PAINTCLIPBOARD 0309
+call doit VSCROLLCLIPBOARD 030A
+call doit SIZECLIPBOARD 030B
+call doit ASKCBFORMATNAME 030C
+call doit CHANGECBCHAIN 030D
+call doit HSCROLLCLIPBOARD 030E
+call doit QUERYNEWPALETTE 030F
+call doit PALETTEISCHANGING 0310
+call doit PALETTECHANGED 0311
+call doit HOTKEY 0312
+call doit PRINT 0317
+call doit PRINTCLIENT 0318
+call doit APPCOMMAND 0319
+call doit THEMECHANGED 031A
+call doit CLIPBOARDUPDATE 031D
+call doit DWMCOMPOSITIONCHANGED 031E
+call doit DWMNCRENDERINGCHANGED 031F
+call doit DWMCOLORIZATIONCOLORCHANGED 0320
+call doit DWMWINDOWMAXIMIZEDCHANGE 0321
+call doit DWMSENDICONICTHUMBNAIL 0323
+call doit DWMSENDICONICLIVEPREVIEWBITMAP 0326
+call doit GETTITLEBARINFOEX 033F
+call doit HANDHELDFIRST 0358
+call doit HANDHELDLAST 035F
+call doit AFXFIRST 0360
+call doit AFXLAST 037F
+call doit PENWINFIRST 0380
+call doit PENWINLAST 038F
+call doit USER 0400
+call doit APP 8000
