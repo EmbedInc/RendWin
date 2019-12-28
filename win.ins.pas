@@ -117,6 +117,7 @@ type
     lparam: win_lparam_t;              {signed 32 bit integer message parameter}
     time: win_dword_t;                 {time at which message was originally posted}
     coor: win_point_t;                 {cursor screen coordinate when msg posted}
+    private: win_dword_t;              {private field, not for app use}
     end;
 
   win_rect_t = record                  {Windows RECT data type}

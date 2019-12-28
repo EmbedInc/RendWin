@@ -228,6 +228,7 @@ var (rend_win)
   setup: setup_k_t;                    {indicates how we currently have GDI set up}
   brush_h: win_handle_t;               {handle to current brush in DC}
   pen_h: win_handle_t;                 {handle to current pen in DC}
+  last_msg_time: sys_clock_t;          {time last Windows message received}
   made_brush: boolean;                 {TRUE if we created brush in DC}
   made_pen: boolean;                   {TRUE if we created pen in DC}
   whole_screen: boolean;               {TRUE if SCREEN instead of WINDOW device}

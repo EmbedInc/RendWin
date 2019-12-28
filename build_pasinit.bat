@@ -27,6 +27,7 @@ call src_get %srcdir% win.ins.pas
 call src_get %srcdir% win_keys.ins.pas
 call src_get %srcdir% win_msg.ins.pas
 call src_get %srcdir% win_sys.ins.pas
+call src_get %srcdir% win_show_message.ins.pas
 
 make_debug debug_switches.ins.pas
 call src_builddate "%srcdir%"

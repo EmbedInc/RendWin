@@ -152,6 +152,7 @@ begin
       end;
     wclass.name_p := univ_ptr(addr(window_class_name));
 
+    last_msg_time := sys_clock;        {init time of last Windows message}
     atom_class := RegisterClassExA (wclass); {try to create our new window class}
     if atom_class = 0 then begin       {failed to create new window class ?}
       stat.sys := GetLastError;        {return with error}
