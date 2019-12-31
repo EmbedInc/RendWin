@@ -562,20 +562,7 @@ begin
       mouse_left := 1;
       mouse_right := 2;
       end;
-3:  begin                              {the mouse has 3 buttons}
-      mouse_left := 1;
-      if wheel
-        then begin                     {the third button is really a wheel}
-          mouse_middle := 3;
-          mouse_right := 2;
-          end
-        else begin                     {all three are real buttons}
-          mouse_middle := 2;
-          mouse_right := 3;
-          end
-        ;
-      end;
-otherwise                              {the mouse has more than three buttons}
+otherwise                              {the mouse has 3 or more buttons}
     mouse_left := 1;                   {just use the first three buttons}
     mouse_middle := 2;
     mouse_right := 3;
@@ -740,9 +727,9 @@ otherwise                              {the mouse has more than three buttons}
   set_spkey (winkey_up_k, rend_key_sp_arrow_up_k, 0);
   set_spkey (winkey_down_k, rend_key_sp_arrow_down_k, 0);
 
-  %debug; if rend_debug_level >= 8 then begin
-  %debug;   for vk := 0 to 255 do begin
-  %debug;     show_key (vk);
-  %debug;     end;
-  %debug;   end;
+  if rend_debug_level >= 10 then begin
+    for vk := 0 to 255 do begin
+      show_key (vk);
+      end;
+    end;
   end;
