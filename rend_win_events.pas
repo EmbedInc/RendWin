@@ -6,15 +6,15 @@ define rend_win_keys_init;
 %include 'rend_win.ins.pas';
 %include 'win_keys.ins.pas';
 {
-*****************************************************************************
+********************************************************************************
 *
 *   Function REND_WIN_EVENT_CHECK (WAIT)
 *
-*   This routine is called by RENDlib to check for any events from this
-*   device.  When WAIT is TRUE, we must wait until the next event becomes
-*   available.  When WAIT is FALSE, we enqueue an event only if one is
-*   available immediately.  In either case, the function value is TRUE
-*   when an event is enqueued, and FALSE if none is enqueued.
+*   This routine is called by RENDlib to check for any events from this device.
+*   When WAIT is TRUE, we must wait until the next event becomes available.
+*   When WAIT is FALSE, we enqueue an event only if one is available
+*   immediately.  In either case, the function value is TRUE when an event is
+*   enqueued, and FALSE if none is enqueued.
 }
 function rend_win_event_check (        {called by RENDlib to check for WIN events}
   in      wait: boolean)               {wait for event when TRUE}
@@ -56,7 +56,7 @@ next_win_event:                        {back here to get next event from our que
 
   case wev.id of                       {which WIN event is it ?}
 {
-**************************************
+****************************************
 *
 *   The user wants the window closed.
 }
@@ -68,7 +68,7 @@ event_close_user_k: begin
     end;
   end;
 {
-**************************************
+****************************************
 *
 *   The window has been closed.
 }
@@ -80,10 +80,10 @@ event_closed_k: begin                  {the window has been closed}
     end;
   end;
 {
-**************************************
+****************************************
 *
-*   A key has been pressed, or an additional key make was created by the keyboard
-*   auto-repeat feature.
+*   A key has been pressed, or an additional key make was created by the
+*   keyboard auto-repeat feature.
 }
 event_keydown_k: begin                 {a key was pressed}
   rend_pointer.x := wev.keydown_x;
@@ -112,7 +112,7 @@ event_keydown_k: begin                 {a key was pressed}
     then rev.key.modk := rev.key.modk + [rend_key_mod_alt_k];
   end;
 {
-**************************************
+****************************************
 *
 *   A key has been released.
 }
@@ -143,7 +143,7 @@ event_keyup_k: begin                   {a key was released}
     then rev.key.modk := rev.key.modk + [rend_key_mod_alt_k];
   end;
 {
-**************************************
+****************************************
 *
 *   The window size has changed.
 }
@@ -178,10 +178,10 @@ event_size_k: begin                    {window size changed}
     end;
   end;
 {
-**************************************
+****************************************
 *
-*   A rectangular region of the window got wiped out, and is now ready to
-*   be redrawn.
+*   A rectangular region of the window got wiped out, and is now ready to be
+*   redrawn.
 }
 event_rect_k: begin                    {a rectangle needs repainting}
   if                                   {we care about dirty rectangles ?}
@@ -196,7 +196,7 @@ event_rect_k: begin                    {a rectangle needs repainting}
     end;
   end;
 {
-**************************************
+****************************************
 *
 }
 event_penter_k: begin                  {pointer entered window}
@@ -212,7 +212,7 @@ event_penter_k: begin                  {pointer entered window}
     end;
   end;
 {
-**************************************
+****************************************
 *
 }
 event_pexit_k: begin                   {pointer left window}
@@ -228,7 +228,7 @@ event_pexit_k: begin                   {pointer left window}
     end;
   end;
 {
-**************************************
+****************************************
 *
 }
 event_pmove_k: begin                   {pointer location changed}
@@ -252,7 +252,7 @@ event_pmove_k: begin                   {pointer location changed}
     end;
   end;
 {
-**************************************
+****************************************
 *
 *   Unrecognized internal event ID.
 }
@@ -261,11 +261,11 @@ otherwise
     rend_message_bomb ('rend_win', 'event_unrecognized', msg_parm, 1);
     end;                               {end of WIN driver event cases}
 {
-*   All done processing this WIN driver internal event.  If a RENDlib event
-*   was generated, then REV.EV_TYPE is set to the ID of the event.  In that
-*   case, we enqueue the event.  In any case we go back for the next WIN
-*   event, because we always empty the available WIN event queue whenever
-*   this routine gets called.
+*   All done processing this WIN driver internal event.  If a RENDlib event was
+*   generated, then REV.EV_TYPE is set to the ID of the event.  In that case, we
+*   enqueue the event.  In any case we go back for the next WIN event, because
+*   we always empty the available WIN event queue whenever this routine gets
+*   called.
 }
   if rev.ev_type <> rend_ev_none_k then begin {we have an event to send to RENDlib ?}
     rend_event_enqueue (rev);          {enqueue the RENDlib event}
@@ -275,16 +275,15 @@ otherwise
   goto next_win_event;                 {back to check for next WIN device event}
   end;
 {
-*****************************************************************************
+********************************************************************************
 *
 *   Local subroutine GET_KEY_VAL (VK, SC, KB, STR_P)
 *
-*   Determine a key's value (string when pressed, not key cap name).  VK
-*   is the Windows virtual key code, SC is the Windows scan code, KB
-*   is a Windows keyboard state array, and STR_P is the returned string
-*   to the key value string.  If a key value can be obtained, then STR_P
-*   is returned pointing to a var string for the value, otherwise STR_P
-*   is returned NIL.
+*   Determine a key's value (string when pressed, not key cap name).  VK is the
+*   Windows virtual key code, SC is the Windows scan code, KB is a Windows
+*   keyboard state array, and STR_P is the returned string to the key value
+*   string.  If a key value can be obtained, then STR_P is returned pointing to
+*   a var string for the value, otherwise STR_P is returned NIL.
 }
 procedure get_key_val (                {get key value string}
   in      vk: sys_int_machine_t;       {Windows virtual key ID}
@@ -323,14 +322,14 @@ begin
     ;
   end;
 {
-*****************************************************************************
+********************************************************************************
 *
 *   Local subroutine SET_SPKEY (WK, RK, DET)
 *
-*   Set the special key info, if possible, in a RENDlib key descriptor.
-*   WK is the Windows virtual key code.  RK is the RENDlib special key
-*   ID.  DET is the RENDlib detail value for the particular special key.
-*   Nothing is done if the indicated key does not exist.
+*   Set the special key info, if possible, in a RENDlib key descriptor.  WK is
+*   the Windows virtual key code.  RK is the RENDlib special key ID.  DET is the
+*   RENDlib detail value for the particular special key.  Nothing is done if the
+*   indicated key does not exist.
 }
 procedure set_spkey (                  {set RENDlib special key info}
   in      wk: winkey_k_t;              {Windows virtual key ID}
@@ -349,12 +348,12 @@ begin
   k_p^.spkey.detail := det;
   end;
 {
-*****************************************************************************
+********************************************************************************
 *
 *   Local subroutine SHOW_KEY (VK)
 *
-*   Show info for the key identified by the Windows virtual key code VK.
-*   This routine is for debugging purposes.
+*   Show info for the key identified by the Windows virtual key code VK.  This
+*   routine is for debugging purposes.
 }
 procedure show_key (                   {show RENDlib key info}
   in      vk: sys_int_machine_t);      {Windows virtual key code}
@@ -426,14 +425,14 @@ begin
   writeln;
   end;
 {
-*****************************************************************************
+********************************************************************************
 *
 *   Local subroutine MAKE_MOUSE_KEY (VK, DET)
 *
-*   Make sure a mouse key is in the keys list.  VK is the Windows virtual
-*   key code of the mouse key, and DET is the RENDlib detail value for the
-*   mouse key.  Nothing is done if DET is <= 0, or a RENDlib key descriptor
-*   already exists for this virtual key code.
+*   Make sure a mouse key is in the keys list.  VK is the Windows virtual key
+*   code of the mouse key, and DET is the RENDlib detail value for the mouse
+*   key.  Nothing is done if DET is <= 0, or a RENDlib key descriptor already
+*   exists for this virtual key code.
 }
 procedure make_mouse_key (             {make sure mouse key exists}
   in      vk: winkey_k_t;              {Windows virtual key code of mouse key}
@@ -469,21 +468,20 @@ begin
     end;                               {done with K abbreviation}
   end;
 {
-*****************************************************************************
+********************************************************************************
 *
 *   Subroutine REND_WIN_KEYS_INIT
 *
 *   Initialize the state for the keyboard, mouse, and other keys for this
-*   device.  Before this routine is called, the device will appear to have
-*   no keys to the application.  This routine is really part of the general
-*   device initialization process.  It is a seperate routine only for
-*   maintainability.
+*   device.  Before this routine is called, the device will appear to have no
+*   keys to the application.  This routine is really part of the general device
+*   initialization process.  It is a seperate routine only for maintainability.
 *
-*   This routine is called by the window thread after the window is created
-*   but before it is made visible.  At this point the main thread is just
-*   waiting for the window thread to signal it is done initializing.  Therefore
-*   the state for our device is swapped in and there are no synchronization
-*   problems since the main thread is just waiting.
+*   This routine is called by the window thread after the window is created but
+*   before it is made visible.  At this point the main thread is just waiting
+*   for the window thread to signal it is done initializing.  Therefore the
+*   state for our device is swapped in and there are no synchronization problems
+*   since the main thread is just waiting.
 }
 procedure rend_win_keys_init;          {init events key state for this device}
 
@@ -508,20 +506,26 @@ begin
   s.max := size_char(s.str);           {init local var string}
 {
 *   Find out how many valid keys there are.  We will use this information to
-*   allocate one contiguous array of key descriptors later.  In this loop,
-*   we don't gather the information for each key, but just figure out which
-*   virtual key codes are valid.  the DEV[REND_DEV_ID].KEYP entry for each
-*   virtual key code will be set to NIL if the key doesn't exist, and 1
-*   if it does.  The 1 will later be overwritten with a pointer to the
-*   RENDlib key descriptor.
+*   allocate one contiguous array of key descriptors later.  In this loop, we
+*   don't gather the information for each key, but just figure out which virtual
+*   key codes are valid.  The DEV[REND_DEV_ID].KEYP entry for each virtual key
+*   code will be set to NIL if the key doesn't exist, and 1 if it does.  The 1
+*   will later be overwritten with a pointer to the RENDlib key descriptor.
 *
-*   Apparently, valid virtual key codes for keyboard keys always have
-*   associated key names.  Some invalid codes still have scan codes.
-*   Also, the mouse keys don't seem to have scan codes, so these need to
-*   be handled separately.
+*   Apparently, valid virtual key codes for keyboard keys always have associated
+*   key names.  Some invalid codes still have scan codes.  Also, the mouse keys
+*   don't seem to have scan codes, so these need to be handled separately.
 }
   rkey_max := 0;                       {init number of valid keys found}
   adr := 1;                            {pointer value to flag virt key code exists}
+
+  {   Set static fields in key info request structure.  Only the scan code (SCAN
+  *   field) will be altered dynamically.
+  }
+  kinfo.unused1 := 0;
+  kinfo.ext := false;                  {not an extended key}
+  kinfo.nlr := true;                   {don't distinguish left and right keys}
+  kinfo.unused2 := 0;
 
   for vk := 0 to 255 do begin          {once for each Windows virtual key code}
     dev[rend_dev_id].keyp[vk] := nil;  {init to this key doesn't exist}
@@ -530,11 +534,7 @@ begin
       xlatekey_virt_scan_k);           {type of translation requested}
     if sc = 0 then next;               {no such key ?}
 
-    kinfo.unused1 := 0;                {set static fields in key info}
-    kinfo.ext := false;                {not an extended key}
-    kinfo.nlr := true;                 {don't distinguish left and right keys}
-    kinfo.unused2 := 0;
-    kinfo.scan := sc;                  {key scan code}
+    kinfo.scan := sc;                  {set scan code inquiring about}
     s.len := GetKeyNameTextA (         {try to get key cap name for this key}
       kinfo,                           {info on key inquiring about}
       s.str,                           {returned null-terminated string}
@@ -548,7 +548,7 @@ begin
   i := GetSystemMetrics (metric_cmousebuttons_k); {get number of mouse buttons}
   lftrit :=                            {TRUE if swap left/right mouse buttons}
     GetSystemMetrics(metric_swapbutton_k) <> 0;
-  wheel :=                             {TRUE if last mouse button is reall a wheel}
+  wheel :=                             {TRUE if last mouse button is really a wheel}
     GetSystemMetrics(metric_mousewheel_k) <> 0;
   mouse_left := 0;                     {init to no physical mouse keys exist}
   mouse_middle := 0;
@@ -605,8 +605,8 @@ otherwise                              {the mouse has more than three buttons}
   rend_device[rend_dev_id].keys_max := rkey_max; {set max RENDlib key ID}
 {
 *   The number of valid keys we found is in RKEY_MAX and
-*   REND_DEVICE[REND_DEV_ID].KEYS_MAX.  Each entry in DEV[REND_DEV_ID].KEYP
-*   is set to NIL for no key, and 1 if the key seemed to exist.
+*   REND_DEVICE[REND_DEV_ID].KEYS_MAX.  Each entry in DEV[REND_DEV_ID].KEYP is
+*   set to NIL for no key, and 1 if the key seemed to exist.
 *
 *   Now allocate the RENDlib key descriptors array.
 }
@@ -619,8 +619,8 @@ otherwise                              {the mouse has more than three buttons}
   rend_device[rend_dev_id].keys_p := keys_p; {save keys array pointer in dev desc}
 {
 *   Init KB, the keyboard state array.  This will be used to find key values
-*   with various modifier keys pressed.  It must always be reset to all keys
-*   up when done with it.
+*   with various modifier keys pressed.  It must always be reset to all keys up
+*   when done with it.
 }
   for vk := 0 to 255 do begin          {once for each virtual key code}
     kb[vk] := 0;                       {indicate this key is not pressed}
@@ -646,7 +646,7 @@ otherwise                              {the mouse has more than three buttons}
       rend_get.key_sp_def^ (k.spkey);  {init special key data to default}
       k.id_user := 0;                  {unused until events requested for this key}
 
-      kinfo.scan := sc;                {set key scan code}
+      kinfo.scan := sc;                {set scan code inquiring about}
       s.len := GetKeyNameTextA (       {try to get key cap name for this key}
         kinfo,                         {info on key inquiring about}
         s.str,                         {returned null-terminated string}
@@ -696,19 +696,19 @@ otherwise                              {the mouse has more than three buttons}
   rend_device[rend_dev_id].keys_n := rkey - 1; {set number of valid RENDlib keys}
 {
 *   Make sure the mouse keys are added.  These may not have scan codes, so may
-*   not have been created.  We did earlier check for how many "extra" mouse
-*   keys there are and left room, so we can just assume sufficient entries exist
-*   in the RENDlib keys array.
+*   not have been created.  We did earlier check for how many "extra" mouse keys
+*   there are and left room, so we can just assume sufficient entries exist in
+*   the RENDlib keys array.
 }
   make_mouse_key (winkey_lbutton_k, mouse_left); {make sure mouse keys are in list}
   make_mouse_key (winkey_mbutton_k, mouse_middle);
   make_mouse_key (winkey_rbutton_k, mouse_right);
 {
-*   The RENDlib key descriptors have all been filled in, except that the
-*   RENDlib special key information has been set to default.
+*   The RENDlib key descriptors have all been filled in, except that the RENDlib
+*   special key information has been set to default.
 *
-*   Now fill in the RENDlib special key information for those special keys
-*   we know about and that exist.
+*   Now fill in the RENDlib special key information for those special keys we
+*   know about and that exist.
 }
   set_spkey (winkey_f1_k, rend_key_sp_func_k, 1); {numbered function keys}
   set_spkey (winkey_f2_k, rend_key_sp_func_k, 2);
