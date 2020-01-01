@@ -45,15 +45,15 @@ var
 label
   done_colors, abort0, abort1, no_dev;
 {
-********************************************************************
+********************************************************************************
 *
 *   Subroutine REND_WIN_SET_CINDEX_ENTRY (N, N_COL, MULT, ENTRY)
 *
-*   Set a CINDEX array entry for a particular color.  N is the 0 to 255
-*   input color value for this CINDEX array entry.  N_COL is the
-*   number of levels for this primary.  MULT is the number of sequential
-*   pseudo colors that contain the same primary value.  ENTRY is the
-*   part of a CINDEX array entry to fill in.
+*   Set a CINDEX array entry for a particular color.  N is the 0 to 255 input
+*   color value for this CINDEX array entry.  N_COL is the number of levels for
+*   this primary.  MULT is the number of sequential pseudo colors that contain
+*   the same primary value.  ENTRY is the part of a CINDEX array entry to fill
+*   in.
 }
 procedure rend_win_set_cindex_entry (  {set entry in color index table}
   in      n: sys_int_machine_t;        {0 to 255 input color value}
@@ -98,7 +98,7 @@ begin
   entry.dith_high := entry.dith_high * mult;
   end;
 {
-********************************************************************
+********************************************************************************
 *
 *   Start of main routine.
 }
@@ -117,11 +117,11 @@ begin
     sys_sys_stdout_fix;                {make sure C lib output routed to console}
     end;
 {
-***************************************
+****************************************
 *
 *   Init static driver state that remains valid even after all devices are
-*   closed.  This section is run at most once per program on the first call
-*   to REND_WIN_INIT.
+*   closed.  This section is run at most once per program on the first call to
+*   REND_WIN_INIT.
 }
   if first_time then begin             {driver common block totally unititialized ?}
     first_time := false;               {reset flag to prevent coming here again}
@@ -175,13 +175,13 @@ begin
 *   Done with the initialization that is only performed once per program
 *   invocation.
 *
-***************************************
+****************************************
 *
 *   Interpret the DEV_NAME and PARMS arguments to determine the window
-*   configuration parameters.  The result will be put into WINFO.
-*   WHOLE_SCREEN will be set if the device is supposed to be the entire screen,
-*   in which case only WINFO.SCREEN is filled in.  Otherwise, WHOLE_SCREEN
-*   is false, and all of WINFO is filled in.
+*   configuration parameters.  The result will be put into WINFO.  WHOLE_SCREEN
+*   will be set if the device is supposed to be the entire screen, in which case
+*   only WINFO.SCREEN is filled in.  Otherwise, WHOLE_SCREEN is false, and all
+*   of WINFO is filled in.
 }
   string_tkpick80 (dev_name,           {which RENDlib device was requested ?}
     'SCREEN WINDOW',
@@ -216,14 +216,13 @@ otherwise                              {unexpected RENDlib inherent device name}
     return;
     end;                               {end of inherent RENDlib device name cases}
 {
-***************************************
+****************************************
 *
 *   Initialize some of the state shared between Windows devices.  This
-*   initialization is only performed if there are no currently open
-*   Windows devices.  Any resources allocated here are released when
-*   the last Windows device is closed.  This is done in routine
-*   REND_WIN_NODEVS.  Therefore, any changes here must be reflected in
-*   REND_WIN_NODEVS.
+*   initialization is only performed if there are no currently open Windows
+*   devices.  Any resources allocated here are released when the last Windows
+*   device is closed.  This is done in routine REND_WIN_NODEVS.  Therefore, any
+*   changes here must be reflected in REND_WIN_NODEVS.
 }
   if n_windows = 0 then begin          {no currently open Windows devices ?}
     evi_write := 0;                    {init events queue to empty}
@@ -255,7 +254,7 @@ otherwise                              {unexpected RENDlib inherent device name}
 
   n_windows := n_windows + 1;          {indicate one more active Windows device}
 {
-***************************************
+****************************************
 *
 *   Launch the window thread and wait for it to finish initializing.
 *
@@ -326,10 +325,10 @@ otherwise                              {unexpected RENDlib inherent device name}
     end;
 {
 *   The window thread has been launched and it has finished its initialization.
-*   This means our window is now visible on the screen.  It's initial size
-*   and position have been set.
+*   This means our window is now visible on the screen.  It's initial size and
+*   position have been set.
 *
-***************************************
+****************************************
 *
 *   Gather more info about the window.
 }
@@ -369,9 +368,9 @@ otherwise                              {unexpected RENDlib inherent device name}
   bitspixel :=                         {get number of bits/pixel on device}
     GetDeviceCaps (dc, win_devcap_bitspixel_k);
 {
-*   Fix up BITSPIXEL.  On some really old VGA systems, this is reported as
-*   1, even though the system can display 16 colors.  We therefore make sure
-*   that BITSPIXEL is never less than Log2 of NUMCOLORS.
+*   Fix up BITSPIXEL.  On some really old VGA systems, this is reported as 1,
+*   even though the system can display 16 colors.  We therefore make sure that
+*   BITSPIXEL is never less than Log2 of NUMCOLORS.
 }
   n := GetDeviceCaps(dc, win_devcap_numcolors_k); {get number of colors}
   i := 1;                              {init number of bits}
@@ -401,10 +400,10 @@ otherwise                              {unexpected RENDlib inherent device name}
 
   case bitspixel of                    {different code for each HW pixel format}
 {
-*********************
+********************
 *
-*   4 bits per pixel.  We only use the 8 primary colors because they
-*   are always available.  This means we essentially have 1 bit/color/pixel.
+*   4 bits per pixel.  We only use the 8 primary colors because they are always
+*   available.  This means we essentially have 1 bit/color/pixel.
 }
 4: begin
   if n_windows = 1 then begin          {only init state for first window}
@@ -419,11 +418,10 @@ otherwise                              {unexpected RENDlib inherent device name}
       palette := false;                {we won't use palette in this mode}
       {
       *   Set mapping from our internal pcolors to the Windows VGA 16 pcolors.
-      *   The first 8 Windows pcolors are the full RGB primaries with red
-      *   mapped to the lowest bit and blue to the highest.  Our internal
-      *   pcolors are reversed with blue mapped to the lowest bit and red
-      *   to the highest.  The table PC_WIN translates our pcolors to the
-      *   Window pcolor.
+      *   The first 8 Windows pcolors are the full RGB primaries with red mapped
+      *   to the lowest bit and blue to the highest.  Our internal pcolors are
+      *   reversed with blue mapped to the lowest bit and red to the highest.
+      *   The table PC_WIN translates our pcolors to the Window pcolor.
       }
       pc_win[0] := 0;                  {       blk}
       pc_win[1] := 4;                  {    b  blu}
@@ -439,7 +437,7 @@ otherwise                              {unexpected RENDlib inherent device name}
   pixform := pixform_pc4_k;            {pixel format is 4 bit pseudo color}
   end;
 {
-*********************
+********************
 *
 *   8 bits per pixel pseudo color.  We always use 240 colors.
 }
@@ -455,7 +453,7 @@ otherwise                              {unexpected RENDlib inherent device name}
   pixform := pixform_pc8_k;            {pixel format is 8 bit pseudo color}
   end;
 {
-*********************
+********************
 *
 *   16 bits per pixel true color, xRGB 1,5,5,5
 }
@@ -471,7 +469,7 @@ otherwise                              {unexpected RENDlib inherent device name}
   pixform := pixform_tc16_k;           {pixel format is 16 bit true color}
   end;
 {
-*********************
+********************
 *
 *   24 bits per pixel true color.
 }
@@ -488,7 +486,7 @@ otherwise                              {unexpected RENDlib inherent device name}
   pixform := pixform_tc24_k;           {indicate exact pixel format}
   end;
 {
-*********************
+********************
 *
 *   32 bits per pixel true color.
 }
@@ -506,7 +504,7 @@ otherwise                              {unexpected RENDlib inherent device name}
   rend_bits_hw := 24;                  {only 24 bits actually used to make colors}
   end;
 {
-*********************
+********************
 *
 *   Unexpected or unsupported hardware pixel size.
 }
@@ -518,14 +516,14 @@ otherwise
     goto abort1;
     end;                               {end of different pixel size cases}
 {
-***************************************
+****************************************
 *
 *   Init the common color state for all our windows.  All windows on the screen
 *   always have the same pixel format.
 *
-*   Note that some system resources may be allocated here.  This means they
-*   must be deallocated when the last WIN device is closed.  This is done
-*   in subroutine REND_WIN_NODEVS.
+*   Note that some system resources may be allocated here.  This means they must
+*   be deallocated when the last WIN device is closed.  This is done in
+*   subroutine REND_WIN_NODEVS.
 }
   if n_windows <> 1 then goto done_colors; {color state already initialized ?}
   bits_per_pixel := bitspixel;         {save bits per pixel in common block}
@@ -534,8 +532,8 @@ otherwise
 
   if not palette
 {
-*   No palette is required.  This is because we are using a true color mode,
-*   or a fixed pseudo color mode.
+*   No palette is required.  This is because we are using a true color mode, or
+*   a fixed pseudo color mode.
 }
     then begin
       palette_h := handle_none_k;      {indicate we created no pallette}
@@ -559,8 +557,8 @@ otherwise
         goto abort1;
         end;
 {
-*   Create our Windows palette.  The handle to the palette will be left
-*   in PALETTE_H in the common block.
+*   Create our Windows palette.  The handle to the palette will be left in
+*   PALETTE_H in the common block.
 }
       if n_colors > n_colors_max_k then begin
         if rend_debug_level >= 1 then begin
@@ -626,8 +624,8 @@ otherwise
 {
 *   Set up the dither table.  This table supplies threshold values for the
 *   dithering decision.  The sequential threshold values are in DITH_VALS.
-*   These are converted to the runtime dither threshold values and saved
-*   in DITH.
+*   These are converted to the runtime dither threshold values and saved in
+*   DITH.
 }
       for i := 0 to y_dith_max_k do begin {down the dither table rows}
         for j := 0 to x_dith_max_k do begin {across this dither table row}
@@ -635,9 +633,9 @@ otherwise
           end
         end;
 {
-*   Init CINDEX array.  This array is used to translate from the RENDlib 24
-*   bit true color values to lower resolution window color values with and
-*   without dithering enabled.
+*   Init CINDEX array.  This array is used to translate from the RENDlib 24 bit
+*   true color values to lower resolution window color values with and without
+*   dithering enabled.
 }
       for i := 0 to 255 do begin       {once for each possible R, G, or B input val}
         rend_win_set_cindex_entry (i, n_red, n_grn * n_blu, cindex.red[i]);
@@ -662,7 +660,7 @@ done_colors:                           {done initializing our color handling sta
 {
 *   Done initializing our color handling state.
 *
-***************************************
+****************************************
 }
 {
 *   Do more RENDlib initialization.
@@ -739,12 +737,12 @@ done_colors:                           {done initializing our color handling sta
   rend_internal.check_modes^;          {install the appropriate call table routines}
   return;                              {normal return}
 {
-***************************************
+****************************************
 *
 *   Error exits.
 *
-*   The error status will be NO_DEVICE unless STAT is already set to indicate
-*   an error.
+*   The error status will be NO_DEVICE unless STAT is already set to indicate an
+*   error.
 }
 abort1:                                {window thread running, STAT set}
   rend_win_thread_stop;                {try to tell window thread to terminate}

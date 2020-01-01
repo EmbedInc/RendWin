@@ -38,12 +38,12 @@ label
   close_user, noclose, key_flags_down, key_flags_up, mouse_button, done_message,
   default_action;
 {
-**********************************************************************
+********************************************************************************
 *
 *   Local subroutine SET_DEV
 *
-*   Set the local variable DEV_ID to indicate the RENDlib device ID for
-*   the window this message is for.
+*   Set the local variable DEV_ID to indicate the RENDlib device ID for the
+*   window this message is for.
 }
 procedure set_dev;
 
@@ -55,7 +55,46 @@ begin
   sys_message_bomb ('rend_win', 'device_not_found', nil, 0);
   end;
 {
-**********************************************************************
+********************************************************************************
+*
+*   Local subroutine SEND_PNT_MOVE (X, Y)
+*
+*   Send a PNT_MOVE event to RENDlib, if appropriate.  The latest known pointer
+*   coordinates are X,Y.  DEV_ID must be set to the RENDlib device ID for this
+*   window.
+*
+*   This routine eliminates redundant pointer motion events.  Even event
+*   actually sent will be for a different pointer coordinate than the previous.
+}
+procedure send_pnt_move (              {send PNT_MOVE event to RENDlib, if needed}
+  in      x, y: sys_int_machine_t);    {pointer coordinate}
+  val_param;
+
+var
+  ev: event_t;                         {WIN device internal event descriptor}
+
+begin
+  if                                   {already sent this pointer coordinate ?}
+      (dev[dev_id].pntx = x) and
+      (dev[dev_id].pnty = y)
+      then begin
+    return;                            {nothing to do}
+    end;
+
+  dev[dev_id].pntx := x;               {update last known pointer coordinate}
+  dev[dev_id].pnty := y;
+
+  if not (rend_evdev_pnt_k in rend_device[dev_id].ev_req) {pnt messages disabled ?}
+    then return;
+
+  ev.dev := dev_id;                    {fill in Win driver event descriptor}
+  ev.id := event_pmove_k;              {pointer motion event}
+  ev.pmove_x := x;                     {set event coordinate}
+  ev.pmove_y := y;
+  rend_win_event_put (ev);             {put the event in our queue}
+  end;
+{
+********************************************************************************
 *
 *   Start of main routine.
 }
@@ -77,13 +116,15 @@ begin
 winmsg_create_k: begin
   dev_id := rend_dev_id;               {get our RENDlib device ID}
   dev[dev_id].wind_h := win_h;         {save handle to the window for this device}
+  dev[dev_id].pntx := -100000;         {init previous pnt coor to force difference}
+  dev[dev_id].pnty := -100000;
   end;
 {
 **********
 *
-*   ENTERSIZEMOVE  -  The user has just switched into a mode where he may
-*     be actively adjusting the size or position of the window.  We always
-*     get an EXITSIZEMOVE message when the user leaves this mode.
+*   ENTERSIZEMOVE  -  The user has just switched into a mode where he may be
+*     actively adjusting the size or position of the window.  We always get an
+*     EXITSIZEMOVE message when the user leaves this mode.
 *
 *   We suppress any messages caused by window resizing until the user is
 *   finished with the whole resizing operation.
@@ -97,9 +138,9 @@ winmsg_entersizemove_k: begin
 {
 **********
 *
-*   EXITSIZEMOVE  -  A user operation to resize or move the window has just
-*     been terminated.  We now generate an internal SIZE message if the
-*     window size actually got changed.
+*   EXITSIZEMOVE  -  A user operation to resize or move the window has just been
+*     terminated.  We now generate an internal SIZE message if the window size
+*     actually got changed.
 }
 winmsg_exitsizemove_k: begin
   set_dev;                             {determine RENDlib device ID}
@@ -183,8 +224,8 @@ winmsg_move_k: begin
 *
 *   GETMINMAXINFO  -  Allows us to adjust window min/max limits.
 *
-*   We make sure the maximum window size is a big enough so that we can make
-*   a window with the client area being the whole screen.  That's how we implement
+*   We make sure the maximum window size is a big enough so that we can make a
+*   window with the client area being the whole screen.  That's how we implement
 *   the SCREEN device in the REND_WIN driver.
 }
 winmsg_getminmaxinfo_k: begin
@@ -211,9 +252,9 @@ winmsg_getminmaxinfo_k: begin
 **********
 *
 *   QUERYNEWPALETTE  -  One of our windows is about to receive the focus, and
-*     this is our chance to make sure the system palette is set to the colors
-*     we expect.  We must return WIN_BOOL_TRUE_K if we end up changing the
-*     system palette, otherwise we return WIN_BOOL_FALSE_k.
+*     this is our chance to make sure the system palette is set to the colors we
+*     expect.  We must return WIN_BOOL_TRUE_K if we end up changing the system
+*     palette, otherwise we return WIN_BOOL_FALSE_k.
 }
 winmsg_querynewpalette_k: begin
   rend_win_windproc := ord(win_bool_false_k); {init to not changed system palette}
@@ -276,9 +317,9 @@ winmsg_keydown_k,
 winmsg_syskeydown_k: begin
   set_dev;                             {determine RENDlib device ID}
 {
-*   Check for whether this keystroke is an implicit CLOSE_USER event.
-*   This is only done if CLOSE_USER events are enabled.  The following
-*   keystrokes are implicit CLOSE_USER events:
+*   Check for whether this keystroke is an implicit CLOSE_USER event.  This is
+*   only done if CLOSE_USER events are enabled.  The following keystrokes are
+*   implicit CLOSE_USER events:
 *
 *     ALT-F4  -  This is the standard Windows key for closing an application.
 *
@@ -336,6 +377,7 @@ noclose:                               {skip to here if not CLOSE_USER event}
   ev.keydown_x := coor32.x - dev[dev_id].pos_x; {make cursor pos within window}
   ev.keydown_y := coor32.y - dev[dev_id].pos_y;
   ev.keydown_cnt := lparam & 16#FFFF;  {repeat count}
+  send_pnt_move (ev.keydown_x, ev.keydown_y); {send PNT_MOVE event if appropriate}
 {
 *   Common code to set the KEYDOWN_FLAGS field in the KEYDOWN event.
 }
@@ -374,6 +416,7 @@ winmsg_syskeyup_k: begin
   coor32 := GetMessagePos;             {get cursor position during keyboard event}
   ev.keyup_x := coor32.x - dev[dev_id].pos_x; {make cursor pos within window}
   ev.keyup_y := coor32.y - dev[dev_id].pos_y;
+  send_pnt_move (ev.keyup_x, ev.keyup_y); {send PNT_MOVE event if appropriate}
 {
 *   Common code to set the KEYUP_FLAGS field in the KEYUP event.
 }
@@ -393,13 +436,13 @@ key_flags_up:
 {
 **********
 *
-*   A mouse button has been pressed or released.  For all these messages,
-*   the X coordinate is in the low 16 bits of LPARAM, while the Y coordinate
-*   is in the next higher 16 bits.
+*   A mouse button has been pressed or released.  For all these messages, the X
+*   coordinate is in the low 16 bits of LPARAM, while the Y coordinate is in the
+*   next higher 16 bits.
 *
 *   We handle all these messages by identifying the mouse button in VK, and
-*   whether it's an up or down in DOWN.  We then jump to the common code
-*   at MOUSE_BUTTON.
+*   whether it's an up or down in DOWN.  We then jump to the common code at
+*   MOUSE_BUTTON.
 }
 winmsg_lbuttondown_k: begin
   down := true;
@@ -436,6 +479,7 @@ winmsg_rbuttonup_k: begin
 }
 mouse_button:
   set_dev;                             {determine RENDlib device ID}
+
   if down
     then begin
       discard( SetCapture(win_h) );    {keep mouse while button is down}
@@ -444,6 +488,10 @@ mouse_button:
       discard( ReleaseCapture );       {release mouse for possibly other windows}
       end
     ;
+
+  coor32.x := lparam & 16#FFFF;        {extract cursor X coordinate}
+  coor32.y := rshft(lparam, 16) &16#FFFF; {extract cursor Y coordinate}
+  send_pnt_move (coor32.x, coor32.y);  {send PNT_MOVE event if appropriate}
 
   if not (rend_evdev_key_k in rend_device[dev_id].ev_req) {key events disabled ?}
     then goto default_action;
@@ -454,8 +502,6 @@ mouse_button:
   if not key_p^.req then goto default_action; {events disabled for this key ?}
 
   ev.dev := dev_id;                    {fill in Win driver event descriptor}
-  coor32.x := lparam & 16#FFFF;        {extract cursor X coordinate}
-  coor32.y := rshft(lparam, 16) &16#FFFF; {extract cursor Y coordinate}
 
   if down
     then begin                         {this event is for a key press}
@@ -483,19 +529,13 @@ mouse_button:
 winmsg_mousemove_k: begin
   set_dev;                             {determine RENDlib device ID}
 
-  if not (rend_evdev_pnt_k in rend_device[dev_id].ev_req) {pnt messages disabled ?}
-    then goto default_action;
-
-  ev.dev := dev_id;                    {fill in Win driver event descriptor}
-  ev.id := event_pmove_k;              {pointer motion event}
-  coor32.x := lparam & 16#FFFF;        {extract cursor coordinate}
-  coor32.y := rshft(lparam, 16) &16#FFFF;
-  ev.pmove_x := coor32.x;              {set event coordinate}
-  ev.pmove_y := coor32.y;
+  x := lparam & 16#FFFF;               {extract cursor coordinate}
+  y := rshft(lparam, 16) &16#FFFF;
   if rend_debug_level >= 10 then begin
-    writeln ('  ', ev.pmove_x, ',', ev.pmove_y);
+    writeln ('  ', x, ',', y);
     end;
-  rend_win_event_put (ev);             {put the event in our queue}
+
+  send_pnt_move (x, y);
   end;
 {
 **********
@@ -539,13 +579,13 @@ winmsg_paint_k: begin
 {
 **********
 *
-*   CLOSE - The user has used a system window control feature (not the app's)
-*     to request that the window be closed.  We intercept this if CLOSE_USER
-*     events are enabled.  In that case, the app must deliberately close the
-*     window when done.  This gives the app a chance to ask about open files,
-*     clean up, or whatever.  When CLOSE_USER events are disabled, then this
-*     message is passed to the system for the default action, which eventually
-*     causes the window to be destroyed.
+*   CLOSE - The user has used a system window control feature (not the app's) to
+*     request that the window be closed.  We intercept this if CLOSE_USER events
+*     are enabled.  In that case, the app must deliberately close the window
+*     when done.  This gives the app a chance to ask about open files, clean up,
+*     or whatever.  When CLOSE_USER events are disabled, then this message is
+*     passed to the system for the default action, which eventually causes the
+*     window to be destroyed.
 }
 winmsg_close_k: begin
   set_dev;                             {determine RENDlib device ID}

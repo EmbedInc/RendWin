@@ -59,6 +59,7 @@ type
     wind_h: win_handle_t;              {handle to window for this device}
     size_x, size_y: sys_int_machine_t; {current window size in pixels}
     pos_x, pos_y: sys_int_machine_t;   {top left window position within parent}
+    pntx, pnty: sys_int_machine_t;     {last pointer coordinate passed to RENDlib}
     sig_nfull: win_handle_t;           {signalled when queue becomes not full}
     ready: boolean;                    {TRUE if window is ready for drawing}
     shut: boolean;                     {device being shut down}
