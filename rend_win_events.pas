@@ -254,6 +254,15 @@ event_pmove_k: begin                   {pointer location changed}
 {
 ****************************************
 *
+*   The user wants to vertically scroll.
+}
+event_scrollv_k: begin
+  rev.ev_type := rend_ev_scrollv_k;    {fill in RENDlib event descriptor}
+  rev.scrollv.n := wev.scrollv_nup;
+  end;
+{
+****************************************
+*
 *   Unrecognized internal event ID.
 }
 otherwise

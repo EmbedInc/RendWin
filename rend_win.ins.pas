@@ -69,6 +69,7 @@ type
     keyp:                              {pnts to RENDlib key descriptors each key}
       array[0..255]                    {one entry for each Windows virtual key code}
       of rend_key_p_t;                 {may be NIL if no such key}
+    scrollv: sys_int_machine_t;        {accumulated but unsent vertical scroll increment}
     end;
 
   event_k_t = (                        {list of our internal event IDs}
@@ -81,7 +82,8 @@ type
     event_rect_k,                      {a rectangle needs repainting}
     event_penter_k,                    {pointer entered window}
     event_pexit_k,                     {pointer left window}
-    event_pmove_k);                    {pointer location changed}
+    event_pmove_k,                     {pointer location changed}
+    event_scrollv_k);                  {vertical scroll}
 
   keydown_k_t = (                      {additional flags for KEY_DOWN event}
     keydown_shift_k,                   {SHIFT was down}
@@ -125,6 +127,9 @@ event_pexit_k: (                       {pointer left window}
       );
 event_pmove_k: (                       {pointer location changed}
       pmove_x, pmove_y: sys_int_machine_t; {pointer coordinate}
+      );
+event_scrollv_k: (                     {vertical scroll}
+      scrollv_nup: sys_int_machine_t;  {number of increments up}
       );
     end;
 

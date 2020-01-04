@@ -9,6 +9,7 @@ const
   win_default_coor_k = 16#80000000;    {indicate to use default window coordinates}
   win_gdi_error_k = 16#FFFFFFFF;       {used to indicate error in some cases}
   win_color_invalid_k = 16#FFFFFFFF;   {used to indicate invalid COLORREF value}
+  win_mousewheel_inc_k = 120;          {mouse wheel delta for one scroll increment}
 
 type
   win_lresult_t = win_dword_t;         {Windows LRESULT data type}

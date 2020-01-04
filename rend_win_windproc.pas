@@ -57,6 +57,101 @@ begin
 {
 ********************************************************************************
 *
+*   Function HIGH16U (I32)
+*
+*   Extract the high 16 bits of a 32 bit inteteger.  The result is returned as
+*   a unsigned 16 bit value (0 to 65535).
+}
+function high16u (                     {get high 16 bit word, unsigned}
+  in      i32: sys_int_conv32_t)       {32 bit integer to extract word from}
+  :sys_int_machine_t;                  {unsigned 16 bit result}
+  val_param;
+
+begin
+  high16u := rshft(i32, 16) & 16#FFFF;
+  end;
+{
+********************************************************************************
+*
+*   Function HIGH16S (I32)
+*
+*   Extract the high 16 bits of a 32 bit inteteger.  The result is returned as
+*   a signed 16 bit value (-32768 to +32767).
+}
+function high16s (                     {get high 16 bit word, signed}
+  in      i32: sys_int_conv32_t)       {32 bit integer to extract word from}
+  :sys_int_machine_t;                  {signed 16 bit result}
+  val_param;
+
+var
+  ii: sys_int_machine_t;
+
+begin
+  ii := high16u (i32);
+  if ii > 32767 then begin
+    ii := ii - 65536;
+    end;
+  high16s := ii;
+  end;
+{
+********************************************************************************
+*
+*   Function LOW16U (I32)
+*
+*   Extract the low 16 bits of a 32 bit inteteger.  The result is returned as
+*   a unsigned 16 bit value (0 to 65535).
+}
+function low16u (                      {get low 16 bit word, unsigned}
+  in      i32: sys_int_conv32_t)       {32 bit integer to extract word from}
+  :sys_int_machine_t;                  {unsigned 16 bit result}
+  val_param;
+
+begin
+  low16u := i32 & 16#FFFF;
+  end;
+{
+********************************************************************************
+*
+*   Function LOW16S (I32)
+*
+*   Extract the low 16 bits of a 32 bit inteteger.  The result is returned as
+*   a signed 16 bit value (-32768 to +32767).
+}
+function low16s (                      {get low 16 bit word, signed}
+  in      i32: sys_int_conv32_t)       {32 bit integer to extract word from}
+  :sys_int_machine_t;                  {signed 16 bit result}
+  val_param;
+
+var
+  ii: sys_int_machine_t;
+
+begin
+  ii := low16u (i32);
+  if ii > 32767 then begin
+    ii := ii - 65536;
+    end;
+  low16s := ii;
+  end;
+{
+********************************************************************************
+*
+*   Subroutine LPARAM_XY (I32, X, Y)
+*
+*   Extract the signed coordinates from a LPARAM 32 bit integer.  I32 is the
+*   LPARAM word.  X and Y are set to the resulting signed coordinate.
+}
+procedure lparam_xy (                  {get X,Y coordinate from LPARAM word}
+  in      i32: sys_int_conv32_t;       {32 bits in LPARAM coordinate format}
+  out     x, y: sys_int_machine_t);    {resulting X,Y coordinate}
+  val_param;
+
+begin
+  x := low16s(i32);
+  y := high16s(i32);
+  end;
+{
+********************************************************************************
+*
 *   Local subroutine SEND_PNT_MOVE (X, Y)
 *
 *   Send a PNT_MOVE event to RENDlib, if appropriate.  The latest known pointer
@@ -118,6 +213,7 @@ winmsg_create_k: begin
   dev[dev_id].wind_h := win_h;         {save handle to the window for this device}
   dev[dev_id].pntx := -100000;         {init previous pnt coor to force difference}
   dev[dev_id].pnty := -100000;
+  dev[dev_id].scrollv := 0;            {init to no unsent vertical scroll increments}
   end;
 {
 **********
@@ -166,8 +262,7 @@ winmsg_exitsizemove_k: begin
 winmsg_size_k: begin
   set_dev;                             {determine RENDlib device ID}
 
-  x := lparam & 16#FFFF;               {extract new window width}
-  y := rshft(lparam, 16) & 16#FFFF;    {extract new window height}
+  lparam_xy (lparam, x, y);            {get new window size}
   if rend_debug_level >= 10 then begin
     writeln ('  Size = ', x, ',', y);
     end;
@@ -208,8 +303,7 @@ winmsg_size_k: begin
 winmsg_move_k: begin
   set_dev;                             {determine RENDlib device ID}
 
-  x := lparam & 16#FFFF;               {extract new window position within parent}
-  y := rshft(lparam, 16) & 16#FFFF;
+  lparam_xy (lparam, x, y);            {get the new window position}
   if rend_debug_level >= 10 then begin
     writeln ('  Pos = ', x, ',', y);
     end;
@@ -489,9 +583,8 @@ mouse_button:
       end
     ;
 
-  coor32.x := lparam & 16#FFFF;        {extract cursor X coordinate}
-  coor32.y := rshft(lparam, 16) &16#FFFF; {extract cursor Y coordinate}
-  send_pnt_move (coor32.x, coor32.y);  {send PNT_MOVE event if appropriate}
+  lparam_xy (lparam, x, y);            {get coordinates of this event}
+  send_pnt_move (x, y);                {send PNT_MOVE event if appropriate}
 
   if not (rend_evdev_key_k in rend_device[dev_id].ev_req) {key events disabled ?}
     then goto default_action;
@@ -507,16 +600,16 @@ mouse_button:
     then begin                         {this event is for a key press}
       ev.id := event_keydown_k;        {set event ID}
       ev.keydown_p := key_p;           {pointer to RENDlib key descriptor}
-      ev.keydown_x := coor32.x;
-      ev.keydown_y := coor32.y;
+      ev.keydown_x := x;
+      ev.keydown_y := y;
       ev.keydown_cnt := 1;
       goto key_flags_down;             {set FLAGS and finish handling event}
       end
     else begin                         {this event if for a key release}
       ev.id := event_keyup_k;          {set event ID}
       ev.keyup_p := key_p;             {pointer to RENDlib key descriptor}
-      ev.keyup_x := coor32.x;
-      ev.keyup_y := coor32.y;
+      ev.keyup_x := x;
+      ev.keyup_y := y;
       goto key_flags_up;               {set FLAGS and finish handling event}
       end
     ;
@@ -529,13 +622,37 @@ mouse_button:
 winmsg_mousemove_k: begin
   set_dev;                             {determine RENDlib device ID}
 
-  x := lparam & 16#FFFF;               {extract cursor coordinate}
-  y := rshft(lparam, 16) &16#FFFF;
+  lparam_xy (lparam, x, y);            {get the new cursor coordinate}
   if rend_debug_level >= 10 then begin
     writeln ('  ', x, ',', y);
     end;
 
   send_pnt_move (x, y);
+  end;
+{
+**********
+*
+*   MOUSEWHEEL - The scroll wheel on the mouse was rotated.
+}
+winmsg_mousewheel_k: begin
+  set_dev;                             {determine RENDlib device ID}
+
+  y := high16s (wparam);               {get scroll increment}
+  dev[dev_id].scrollv :=               {accumulate unsent scroll delta}
+    dev[dev_id].scrollv + y;
+  y :=                                 {make whole scroll increments}
+    dev[dev_id].scrollv div win_mousewheel_inc_k;
+  if y = 0 then goto done_message;     {no new scroll increment ?}
+  {
+  *   Y is the signed number of whole scroll increments, and is not 0.
+  }
+  dev[dev_id].scrollv :=               {remove scroll delta that will be reported}
+    dev[dev_id].scrollv - (y * win_mousewheel_inc_k);
+
+  ev.dev := dev_id;                    {fill in our event descriptor}
+  ev.id := event_scrollv_k;
+  ev.scrollv_nup := y;
+  rend_win_event_put (ev);             {put the event in our queue}
   end;
 {
 **********
