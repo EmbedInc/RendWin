@@ -736,6 +736,12 @@ otherwise                              {the mouse has 3 or more buttons}
   set_spkey (winkey_up_k, rend_key_sp_arrow_up_k, 0);
   set_spkey (winkey_down_k, rend_key_sp_arrow_down_k, 0);
 
+  set_spkey (winkey_prior_k, rend_key_sp_pageup_k, 0); {Page Up}
+  set_spkey (winkey_next_k, rend_key_sp_pagedn_k, 0); {Page Down}
+  set_spkey (winkey_delete_k, rend_key_sp_del_k, 0); {Delete}
+  set_spkey (winkey_home_k, rend_key_sp_home_k, 0); {Home}
+  set_spkey (winkey_end_k, rend_key_sp_end_k, 0); {End}
+
   if rend_debug_level >= 10 then begin
     for vk := 0 to 255 do begin
       show_key (vk);
