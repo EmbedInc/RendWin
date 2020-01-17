@@ -742,6 +742,10 @@ otherwise                              {the mouse has 3 or more buttons}
   set_spkey (winkey_home_k, rend_key_sp_home_k, 0); {Home}
   set_spkey (winkey_end_k, rend_key_sp_end_k, 0); {End}
 
+  set_spkey (winkey_return_k, rend_key_sp_enter_k, 0); {ENTER or RETURN}
+  set_spkey (winkey_escape_k, rend_key_sp_esc_k, 0); {Escape}
+  set_spkey (winkey_back_k, rend_key_sp_back_k, 0); {Backspace}
+
   if rend_debug_level >= 10 then begin
     for vk := 0 to 255 do begin
       show_key (vk);
