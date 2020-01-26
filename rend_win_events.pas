@@ -303,23 +303,23 @@ procedure get_key_val (                {get key value string}
 
 var
   s: string_var80_t;                   {local var string}
-  i: sys_int_machine_t;                {scratch integer}
+  ii: sys_int_machine_t;               {scratch integer}
 
 begin
   s.max := size_char(s.str);           {init local var string}
 
-  i := ToAscii (                       {try to get key value in ASCII}
+  ii := ToAscii (                      {try to get key value in ASCII}
     vk,                                {virtual key code}
     sc,                                {scan code}
     kb,                                {state of all keyboard keys for context}
     s.str,                             {returned string}
     0);                                {no menu is active}
-  if i <= 0
+  if ii <= 0
     then begin                         {no value string is available}
       str_p := nil;
       end
     else begin                         {we have a value string of length I}
-      s.len := i;                      {set string length}
+      s.len := ii;                     {set string length}
       rend_mem_alloc (                 {allocate memory for key value string}
         string_size (s.len),           {amount of memory required}
         rend_scope_dev_k,              {this memory will belong to the device}
@@ -498,7 +498,7 @@ var
   vk: sys_int_machine_t;               {virtual key code ID}
   sc: sys_int_machine_t;               {key scan code}
   adr: sys_int_adr_t;                  {scratch address value}
-  i: sys_int_machine_t;                {scratch integer}
+  ii: sys_int_machine_t;               {scratch integer}
   keys_p: rend_key_ar_p_t;             {pointer to RENDlib key descriptors array}
   rkey: sys_int_machine_t;             {1-N RENDlib key ID number}
   rkey_max: sys_int_machine_t;         {largest allowable RENDlib key ID}
@@ -554,7 +554,7 @@ begin
     rkey_max := rkey_max + 1;          {count more more valid key}
     end;                               {back to check out next virtual key code}
 
-  i := GetSystemMetrics (metric_cmousebuttons_k); {get number of mouse buttons}
+  ii := GetSystemMetrics (metric_cmousebuttons_k); {get number of mouse buttons}
   lftrit :=                            {TRUE if swap left/right mouse buttons}
     GetSystemMetrics(metric_swapbutton_k) <> 0;
   wheel :=                             {TRUE if last mouse button is really a wheel}
@@ -562,7 +562,7 @@ begin
   mouse_left := 0;                     {init to no physical mouse keys exist}
   mouse_middle := 0;
   mouse_right := 0;
-  case i of                            {different cases for numbers of mouse buttons}
+  case ii of                           {different cases for numbers of mouse buttons}
 0:  ;                                  {there are no mouse buttons}
 1:  begin                              {the mouse has 1 button}
       mouse_left := 1;
