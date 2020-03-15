@@ -1,0 +1,10 @@
+Events resulting from touching one of the markers at Town Hall to the
+screen, dragging, and releasing:
+
+  Message NCHITTEST, wparam 00000000, lparam 010C00FD
+  Message NCACTIVATE, wparam 00000000, lparam 000A054E
+  Message ACTIVATE, wparam 00000000, lparam 000A054E
+  Message ACTIVATEAPP, wparam 00000000, lparam 000026BC
+  Message KILLFOCUS, wparam 000A054E, lparam 00000000
+  Message IME_SETCONTEXT, wparam 00000000, lparam C000000F
+  Message IME_NOTIFY, wparam 00000001, lparam 00000000
