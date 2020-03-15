@@ -1,5 +1,8 @@
-Events resulting from touching one of the markers at Town Hall to the
-screen, dragging, and releasing:
+For SMART Technologies SBID-7275P "electronic whiteboard" system.
+https://www.smarttech.com
+
+Events resulting from touching one of the markers to the screen, dragging,
+and releasing:
 
   Message NCHITTEST, wparam 00000000, lparam 010C00FD
   Message NCACTIVATE, wparam 00000000, lparam 000A054E
