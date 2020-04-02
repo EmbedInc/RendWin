@@ -1,56 +1,39 @@
 {   Module of routines for handling events in the Windows driver.
 }
 module rend_win_event;
-define rend_win_event_check;
+define rend_win_event;
 define rend_win_keys_init;
 %include 'rend_win.ins.pas';
 %include 'win_keys.ins.pas';
 {
 ********************************************************************************
 *
-*   Function REND_WIN_EVENT_CHECK (WAIT)
+*   Subroutine REND_WIN_EVENT (WEV)
 *
-*   This routine is called by RENDlib to check for any events from this device.
-*   When WAIT is TRUE, we must wait until the next event becomes available.
-*   When WAIT is FALSE, we enqueue an event only if one is available
-*   immediately.  In either case, the function value is TRUE when an event is
-*   enqueued, and FALSE if none is enqueued.
+*   Process the Windows event WEV, and possibly create RENDlib events as a
+*   result.
+*
+*   This routine is really part of each window procedure.  It is in a separate
+*   module for easier maintainance.  REND_WIN_EVENT is only called from a
+*   window procedure in response to certain window messages.
 }
-function rend_win_event_check (        {called by RENDlib to check for WIN events}
-  in      wait: boolean)               {wait for event when TRUE}
-  :boolean;                            {TRUE if event returned}
+procedure rend_win_event (             {process a Windows event}
+  in      wev: event_t);               {new Windows event}
   val_param;
 
 const
   max_msg_parms = 1;                   {max parameters we can pass to a message}
 
 var
-  wev: event_t;                        {WIN device internal event descriptor}
   rev: rend_event_t;                   {RENDlib event descriptor}
   dev_id: sys_int_machine_t;           {RENDlib device ID which event is from}
   x, y: sys_int_machine_t;             {scratch coordinates}
-  made_event: boolean;                 {TRUE if we created at least one event}
-  new_event: boolean;                  {scratch event created flag}
   msg_parm:                            {parameter references for messages}
     array[1..max_msg_parms] of sys_parm_msg_t;
 
-label
-  next_win_event;
-
 begin
-  made_event := false;                 {init to no RENDlib event enqueued}
-
-next_win_event:                        {back here to get next event from our queue}
-  rend_win_event_get (                 {get next event from WIN driver event queue}
-    wait and (not made_event),         {wait indefinitely for next event on TRUE}
-    wev);                              {returned WIN driver event descriptor}
-  if wev.id = event_none_k then begin  {no event available ?}
-    rend_win_event_check := made_event; {set function value if we created an event}
-    return;
-    end;
-
   dev_id := wev.dev;                   {fetch RENDlib ID of event device}
-  if not rend_device[dev_id].open then goto next_win_event; {device closed ?}
+  if not rend_device[dev_id].open then return; {device closed ?}
   rev.dev := dev_id;                   {init RENDlib event descriptor target device}
   rev.ev_type := rend_ev_none_k;       {init to no RENDlib event generated}
 
@@ -90,11 +73,11 @@ event_keydown_k: begin                 {a key was pressed}
   rend_pointer.y := wev.keydown_y;
 
   if not (rend_evdev_key_k in rend_device[dev_id].ev_req) {key events disabled ?}
-    then goto next_win_event;
+    then return;
   if wev.keydown_p^.id = rend_key_none_k {RENDlib key descriptor is empty ?}
-    then goto next_win_event;
+    then return;
   if not wev.keydown_p^.req            {events for this key are disabled ?}
-    then goto next_win_event;
+    then return;
 
   rev.ev_type := rend_ev_key_k;        {this is a keyboard event}
   rev.key.down := true;                {key press, as apposed to release}
@@ -121,11 +104,11 @@ event_keyup_k: begin                   {a key was released}
   rend_pointer.y := wev.keyup_y;
 
   if not (rend_evdev_key_k in rend_device[dev_id].ev_req) {key events disabled ?}
-    then goto next_win_event;
+    then return;
   if wev.keyup_p^.id = rend_key_none_k {RENDlib key descriptor is empty ?}
-    then goto next_win_event;
+    then return;
   if not wev.keyup_p^.req              {events for this key are disabled ?}
-    then goto next_win_event;
+    then return;
 
   rev.ev_type := rend_ev_key_k;        {this is a keyboard event}
   rev.key.down := false;               {key release, as apposed to press}
@@ -157,7 +140,7 @@ event_size_k: begin                    {window size changed}
       (rend_image.x_size = x) and
       (rend_image.y_size = y)
       then begin
-    goto next_win_event;               {ignore if we already know about new size}
+    return;                            {ignore if we already know about new size}
     end;
 
   rend_set.dev_reconfig^;              {reconfigure driver to new size}
@@ -167,7 +150,6 @@ event_size_k: begin                    {window size changed}
       then begin
     rev.ev_type := rend_ev_resize_k;
     rend_event_enqueue (rev);          {enqueue the RENDlib event}
-    made_event := true;                {flag that an event was enqueued}
     rev.ev_type := rend_ev_none_k;     {reset to no pending unsent event}
     end;
 
@@ -198,12 +180,13 @@ event_rect_k: begin                    {a rectangle needs repainting}
 {
 ****************************************
 *
+*   The pointer entered the window.
 }
-event_penter_k: begin                  {pointer entered window}
+event_penter_k: begin
   rend_pointer.x := wev.penter_x;
   rend_pointer.y := wev.penter_y;
 
-  if                                   {we care about window closing ?}
+  if                                   {we care about pointer entering ?}
       rend_evdev_pnt_k in rend_device[dev_id].ev_req
       then begin
     rev.ev_type := rend_ev_pnt_enter_k; {fill in RENDlib event descriptor}
@@ -214,12 +197,13 @@ event_penter_k: begin                  {pointer entered window}
 {
 ****************************************
 *
+*   The pointer left the window.
 }
-event_pexit_k: begin                   {pointer left window}
+event_pexit_k: begin
   rend_pointer.x := wev.pexit_x;
   rend_pointer.y := wev.pexit_y;
 
-  if                                   {we care about window closing ?}
+  if                                   {we care about pointer leaving ?}
       rend_evdev_pnt_k in rend_device[dev_id].ev_req
       then begin
     rev.ev_type := rend_ev_pnt_exit_k; {fill in RENDlib event descriptor}
@@ -230,25 +214,18 @@ event_pexit_k: begin                   {pointer left window}
 {
 ****************************************
 *
+*   The pointer moved.
 }
-event_pmove_k: begin                   {pointer location changed}
-  if rend_debug_level >= 10 then begin
-    write ('Doing WIN driver event PMOVE ', wev.pmove_x, ',', wev.pmove_y, ' ');
-    if rend_evdev_pnt_k in rend_device[dev_id].ev_req
-      then writeln ('ON')
-      else writeln ('OFF');
-    end;
-
+event_pmove_k: begin
   rend_pointer.x := wev.pmove_x;
   rend_pointer.y := wev.pmove_y;
 
-  if                                   {we care about window closing ?}
+  if                                   {we care about the pointer moving ?}
       rend_evdev_pnt_k in rend_device[dev_id].ev_req
       then begin
-    new_event := rend_event_pointer_move ( {handle pointer motion}
+    discard( rend_event_pointer_move ( {let RENDlib handle the pointer motion}
       dev_id,                          {ID of RENDlib device for which pointer moved}
-      wev.pmove_x, wev.pmove_y);       {new pointer coordinate}
-    made_event := made_event or new_event; {update flag for any event created}
+      wev.pmove_x, wev.pmove_y) );     {new pointer coordinate}
     end;
   end;
 {
@@ -269,19 +246,10 @@ otherwise
     sys_msg_parm_int (msg_parm[1], ord(wev.id));
     rend_message_bomb ('rend_win', 'event_unrecognized', msg_parm, 1);
     end;                               {end of WIN driver event cases}
-{
-*   All done processing this WIN driver internal event.  If a RENDlib event was
-*   generated, then REV.EV_TYPE is set to the ID of the event.  In that case, we
-*   enqueue the event.  In any case we go back for the next WIN event, because
-*   we always empty the available WIN event queue whenever this routine gets
-*   called.
-}
+
   if rev.ev_type <> rend_ev_none_k then begin {we have an event to send to RENDlib ?}
     rend_event_enqueue (rev);          {enqueue the RENDlib event}
-    made_event := true;                {set internal flag that event was created}
     end;
-
-  goto next_win_event;                 {back to check for next WIN device event}
   end;
 {
 ********************************************************************************

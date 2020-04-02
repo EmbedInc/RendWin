@@ -225,24 +225,7 @@ otherwise                              {unexpected RENDlib inherent device name}
 *   changes here must be reflected in REND_WIN_NODEVS.
 }
   if n_windows = 0 then begin          {no currently open Windows devices ?}
-    evi_write := 0;                    {init events queue to empty}
-    evi_read := 0;
-    n_events := 0;
-    sig_nempty := CreateEventA (       {make event queue not full signal}
-      nil,                             {no security info supplied}
-      win_bool_false_k,                {reset by system on successful wait}
-      win_bool_false_k,                {not initiallly signalled}
-      nil);                            {no name supplied for sharing}
-    if sig_nempty = handle_none_k then begin
-      stat.sys := GetLastError;
-      if rend_debug_level >= 1 then begin
-        writeln ('Error on trying to create Win32 event for Windows driver event queue.');
-        end;
-      return;
-      end;
-
     InitializeCriticalSection (crsect_dev); {create single-thread interlocks}
-    InitializeCriticalSection (crsect_events);
     may_dith := false;                 {init to dithering not allowed this pixform}
     true_color := false;               {init to pseudo color pixel format}
     palette := true;                   {init to using Windows color palette}
@@ -672,8 +655,6 @@ done_colors:                           {done initializing our color handling sta
       (sys_int_adr_t(addr(rend_win_com_start))+sizeof(rend_win_com_start)) );
 
   rend_close_corrupt := true;          {closing device will destroy the drawing wind}
-  rend_dev_evcheck_set (               {tell RENDlib of our events check routine}
-    addr(rend_win_event_check));
 {
 *   Set call table entry points for this driver.
 }

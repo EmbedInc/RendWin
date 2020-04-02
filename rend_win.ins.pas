@@ -188,32 +188,6 @@ var (rend_win)
     array[0..y_dith_max_k, 0..x_dith_max_k] of 0..frac_high_k;
   pc_win: pc_win_t;                    {CINDEX result to Win pcolor values table}
 {
-*   Our internal event queue.  Events are received from Windows by the window
-*   procedure, which runs asynchronously in a separate thread.  This thread
-*   places events into the queue, which are then read synchronously as directed
-*   by RENDlib.  The event queue and related control state must only be accessed
-*   by one thread at a time.  The critical section CRSECT_EVENTS is used to
-*   make sure access to these variables is single threaded.
-*
-*   Several Win32 events are used to signal queue unempty and unfull.  The
-*   global event SIG_NEMPTY is signalled whenever an entry was added to
-*   a previously empty queue.  The per-device events DEV[dev_id].SIG_NFULL
-*   are all signalled whenever an entry was removed from a previously full
-*   queue.
-*
-*   The mechanics of all the event queue handling and synchronization
-*   are in the routines REND_WIN_EVENT_PUT and REND_WIN_EVENT_GET.  Whenever
-*   possible, these routines should be called instead of directly accessing
-*   the event queue data structure.
-}
-  sig_nempty: win_handle_t;            {signalled on event queue becomes not empty}
-  crsect_events: sys_sys_threadlock_t; {thread interlock for local event queue}
-  evi_write: sys_int_machine_t;        {EVENTQ index where to write next entry to}
-  evi_read: sys_int_machine_t;         {EVENTQ index where to read next entry from}
-  n_events: sys_int_machine_t;         {total number of events in the queue}
-  eventq:                              {window thread to main thread event queue}
-    array[0..eventq_last_k] of event_t;
-{
 *   End of state that is common to all Windows devices.
 *
 ******************
@@ -246,18 +220,8 @@ var (rend_win)
 *   General driver routines that are not installed in one of the various
 *   RENDlib call tables.
 }
-function rend_win_event_check (        {called by RENDlib to check for WIN events}
-  in      wait: boolean)               {wait for event when TRUE}
-  :boolean;                            {TRUE if event returned}
-  val_param; extern;
-
-procedure rend_win_event_get (         {get next event from driver event queue}
-  in      wait: boolean;               {wait for next event evailable on TRUE}
-  out     event: event_t);             {may be event NONE when WAIT is FALSE}
-  val_param; extern;
-
-procedure rend_win_event_put (         {put event at end of queue, wait as needed}
-  in      event: event_t);             {event to place at end of queue}
+procedure rend_win_event (             {process a Windows event}
+  in      wev: event_t);               {new Windows event}
   val_param; extern;
 
 procedure rend_win_init (              {device is a window in Microsoft Windows}

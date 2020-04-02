@@ -154,11 +154,10 @@ begin
 *
 *   Local subroutine SEND_PNT_MOVE (X, Y)
 *
-*   Send a PNT_MOVE event to RENDlib, if appropriate.  The latest known pointer
-*   coordinates are X,Y.  DEV_ID must be set to the RENDlib device ID for this
-*   window.
+*   Send a PNT_MOVE event, if appropriate.  The latest known pointer coordinates
+*   are X,Y.  DEV_ID must be set to the RENDlib device ID for this window.
 *
-*   This routine eliminates redundant pointer motion events.  Even event
+*   This routine eliminates redundant pointer motion events.  Every event
 *   actually sent will be for a different pointer coordinate than the previous.
 }
 procedure send_pnt_move (              {send PNT_MOVE event to RENDlib, if needed}
@@ -186,7 +185,7 @@ begin
   ev.id := event_pmove_k;              {pointer motion event}
   ev.pmove_x := x;                     {set event coordinate}
   ev.pmove_y := y;
-  rend_win_event_put (ev);             {put the event in our queue}
+  rend_win_event (ev);                 {go process the event}
   end;
 {
 ********************************************************************************
@@ -241,7 +240,7 @@ winmsg_entersizemove_k: begin
 winmsg_exitsizemove_k: begin
   set_dev;                             {determine RENDlib device ID}
 
-  if                                   {put SIZE message into our internal queue ?}
+  if                                   {send SIZE event ?}
       dev[dev_id].size_changed and     {size got changed ?}
       ((rend_evdev_resize_k in rend_device[dev_id].ev_req) or {app cares ?}
         (rend_evdev_wiped_resize_k in rend_device[dev_id].ev_req))
@@ -249,7 +248,7 @@ winmsg_exitsizemove_k: begin
     dev[dev_id].size_changed := false; {reset pending size changed flag}
     ev.dev := dev_id;                  {fill in event descriptor}
     ev.id := event_size_k;
-    rend_win_event_put (ev);           {put the event in our queue}
+    rend_win_event (ev);               {send the event}
     end;
 
   dev[dev_id].sizemove := false;       {no longer within SIZEMOVE operation}
@@ -288,7 +287,7 @@ winmsg_size_k: begin
               then begin
             ev.dev := dev_id;          {fill in event descriptor}
             ev.id := event_size_k;
-            rend_win_event_put (ev);   {put the event in our queue}
+            rend_win_event (ev);       {send the event}
             end;
           end                          {end of user done changing size case}
         ;                              {end of user active resizing cases}
@@ -318,7 +317,7 @@ winmsg_move_k: begin
 *
 *   GETMINMAXINFO  -  Allows us to adjust window min/max limits.
 *
-*   We make sure the maximum window size is a big enough so that we can make a
+*   We make sure the maximum window size is big enough so that we can make a
 *   window with the client area being the whole screen.  That's how we implement
 *   the SCREEN device in the REND_WIN driver.
 }
@@ -449,7 +448,7 @@ winmsg_syskeydown_k: begin
 close_user:                            {jump here to generate CLOSE_USER event}
   ev.dev := dev_id;                    {fill in Win driver event descriptor}
   ev.id := event_close_user_k;
-  rend_win_event_put (ev);             {put event into Win driver event queue}
+  rend_win_event (ev);                 {send the event}
   goto done_message;                   {done handling this incoming message}
 
 noclose:                               {skip to here if not CLOSE_USER event}
@@ -486,7 +485,7 @@ key_flags_down:
   if msgid = winmsg_syskeydown_k
     then ev.keydown_flags := ev.keydown_flags + [keydown_alt_k];
 
-  rend_win_event_put (ev);             {put the event in our queue}
+  rend_win_event (ev);                 {send the event}
   end;
 {
 **********
@@ -525,7 +524,7 @@ key_flags_up:
   if msgid = winmsg_syskeyup_k
     then ev.keydown_flags := ev.keydown_flags + [keydown_alt_k];
 
-  rend_win_event_put (ev);             {put the event in our queue}
+  rend_win_event (ev);                 {send the event}
   end;
 {
 **********
@@ -652,7 +651,7 @@ winmsg_mousewheel_k: begin
   ev.dev := dev_id;                    {fill in our event descriptor}
   ev.id := event_scrollv_k;
   ev.scrollv_nup := y;
-  rend_win_event_put (ev);             {put the event in our queue}
+  rend_win_event (ev);                 {send the event}
   end;
 {
 **********
@@ -688,7 +687,7 @@ winmsg_paint_k: begin
     ev.rect_y := paint.dirty.top;
     ev.rect_dx := paint.dirty.rit - paint.dirty.lft + 1;
     ev.rect_dy := paint.dirty.bot - paint.dirty.top + 1;
-    rend_win_event_put (ev);           {put the event in our queue}
+    rend_win_event (ev);               {send the event}
     end;
 
   dev[dev_id].ready := true;           {indicate window is now ready for drawing}
@@ -712,7 +711,7 @@ winmsg_close_k: begin
       then begin
     ev.dev := dev_id;                  {fill in event descriptor}
     ev.id := event_close_user_k;       {WIN driver event ID}
-    rend_win_event_put (ev);           {put the event in our queue}
+    rend_win_event (ev);               {send the event}
     end;
   end;
 {
@@ -728,7 +727,7 @@ winmsg_destroy_k: begin
       then begin
     ev.dev := dev_id;                  {fill in event descriptor}
     ev.id := event_closed_k;
-    rend_win_event_put (ev);           {put the event in our queue}
+    rend_win_event (ev);               {send the event}
     end;
 
   PostQuitMessage (0);                 {indicate to terminate window thread}
