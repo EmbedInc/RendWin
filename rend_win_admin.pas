@@ -9,8 +9,6 @@ define rend_win_close;
 define rend_win_cpnt_2dimi;
 define rend_win_dev_reconfig;
 define rend_win_dith_on;
-define rend_win_event_get;
-define rend_win_event_put;
 define rend_win_iterp_flat;
 define rend_win_min_bits_vis;
 define rend_win_nodevs;

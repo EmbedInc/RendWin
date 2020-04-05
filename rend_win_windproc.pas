@@ -26,7 +26,7 @@ var
   ui: win_uint_t;                      {scratch Windows UINT integer}
   paint: winpaint_t;                   {paint info from BeginPaint}
   minmax_p: win_minmaxinfo_p_t;        {pointer to window min/max allowed limits}
-  ev: event_t;                         {WIN device internal event descriptor}
+  rev: rend_event_t;                   {RENDlib event descriptor}
   key_p: rend_key_p_t;                 {pointer to RENDlib key descriptor}
   vk: sys_int_machine_t;               {Window virtual key code}
   ok: win_bool_t;                      {WIN_BOOL_FALSE_K on system call failure}
@@ -35,25 +35,7 @@ var
   stat: sys_err_t;
 
 label
-  close_user, noclose, key_flags_down, key_flags_up, mouse_button, done_message,
-  default_action;
-{
-********************************************************************************
-*
-*   Local subroutine SET_DEV
-*
-*   Set the local variable DEV_ID to indicate the RENDlib device ID for the
-*   window this message is for.
-}
-procedure set_dev;
-
-begin
-  for dev_id := 1 to rend_max_devices do begin {once for each RENDlib device}
-    if dev[dev_id].wind_h = win_h then return; {found our device ?}
-    end;                               {back to try next RENDlib device}
-
-  sys_message_bomb ('rend_win', 'device_not_found', nil, 0);
-  end;
+  noclose, key_send, mouse_button, done_message, default_action;
 {
 ********************************************************************************
 *
@@ -152,6 +134,25 @@ begin
 {
 ********************************************************************************
 *
+*   Local subroutine SET_DEV
+*
+*   Set the local variable DEV_ID to indicate the RENDlib device ID for the
+*   window this message is for.
+}
+procedure set_dev;
+
+begin
+  for dev_id := 1 to rend_max_devices do begin {once for each RENDlib device}
+    if dev[dev_id].wind_h = win_h then begin {found our device ?}
+      return;
+      end;
+    end;                               {back to try next RENDlib device}
+
+  sys_message_bomb ('rend_win', 'device_not_found', nil, 0);
+  end;
+{
+********************************************************************************
+*
 *   Local subroutine SEND_PNT_MOVE (X, Y)
 *
 *   Send a PNT_MOVE event, if appropriate.  The latest known pointer coordinates
@@ -165,7 +166,7 @@ procedure send_pnt_move (              {send PNT_MOVE event to RENDlib, if neede
   val_param;
 
 var
-  ev: event_t;                         {WIN device internal event descriptor}
+  ev: rend_event_t;                    {RENDlib event}
 
 begin
   if                                   {already sent this pointer coordinate ?}
@@ -181,11 +182,44 @@ begin
   if not (rend_evdev_pnt_k in rend_device[dev_id].ev_req) {pnt messages disabled ?}
     then return;
 
-  ev.dev := dev_id;                    {fill in Win driver event descriptor}
-  ev.id := event_pmove_k;              {pointer motion event}
-  ev.pmove_x := x;                     {set event coordinate}
-  ev.pmove_y := y;
-  rend_win_event (ev);                 {go process the event}
+  ev.dev := dev_id;                    {fill in event descriptor}
+  ev.ev_type := rend_ev_pnt_move_k;
+  ev.pnt_move.x := x;
+  ev.pnt_move.y := y;
+  rend_event_enqueue (ev);             {create the RENDlib event}
+  end;
+{
+********************************************************************************
+*
+*   Local subroutine SIZE_CHANGED
+*
+*   The window size changed.  Update the RENDlib state and generate any events
+*   accordingly.
+}
+procedure size_changed;
+  val_param; internal;
+
+var
+  rev: rend_event_t;                   {RENDlib event}
+
+begin
+  rend_set.dev_reconfig^;              {reconfigure driver to new size}
+
+  rev.dev := dev_id;                   {set device any event is for}
+
+  if                                   {want to know about resize directly ?}
+      rend_evdev_resize_k in rend_device[dev_id].ev_req
+      then begin
+    rev.ev_type := rend_ev_resize_k;
+    rend_event_enqueue (rev);          {enqueue the RENDlib event}
+    end;
+
+  if                                   {merge resize with wiped rect ?}
+      rend_evdev_wiped_resize_k in rend_device[dev_id].ev_req
+      then begin
+    rev.ev_type := rend_ev_wiped_resize_k;
+    rend_event_enqueue (rev);          {enqueue the RENDlib event}
+    end;
   end;
 {
 ********************************************************************************
@@ -194,6 +228,8 @@ begin
 }
 begin
   dev_id := 0;                         {init to RENDlib device ID not determined yet}
+  rev.dev := 0;                        {init RENDlib event to empty}
+  rev.ev_type := rend_ev_none_k;
 
   if rend_debug_level >= 10 then begin
     rend_win_show_message (msgid, wparam, lparam); {show message and parms}
@@ -234,8 +270,7 @@ winmsg_entersizemove_k: begin
 **********
 *
 *   EXITSIZEMOVE  -  A user operation to resize or move the window has just been
-*     terminated.  We now generate an internal SIZE message if the window size
-*     actually got changed.
+*     terminated.
 }
 winmsg_exitsizemove_k: begin
   set_dev;                             {determine RENDlib device ID}
@@ -246,9 +281,7 @@ winmsg_exitsizemove_k: begin
         (rend_evdev_wiped_resize_k in rend_device[dev_id].ev_req))
       then begin
     dev[dev_id].size_changed := false; {reset pending size changed flag}
-    ev.dev := dev_id;                  {fill in event descriptor}
-    ev.id := event_size_k;
-    rend_win_event (ev);               {send the event}
+    size_changed;                      {generate events for the size change}
     end;
 
   dev[dev_id].sizemove := false;       {no longer within SIZEMOVE operation}
@@ -281,14 +314,7 @@ winmsg_size_k: begin
           dev[dev_id].size_changed := true; {just flag that size got changed}
           end
         else begin                     {user is not actively changing window size}
-          if                           {app wants to hear about size changed ?}
-              (rend_evdev_resize_k in rend_device[dev_id].ev_req) or
-              (rend_evdev_wiped_resize_k in rend_device[dev_id].ev_req)
-              then begin
-            ev.dev := dev_id;          {fill in event descriptor}
-            ev.id := event_size_k;
-            rend_win_event (ev);       {send the event}
-            end;
+          size_changed;                {handle changed window size}
           end                          {end of user done changing size case}
         ;                              {end of user active resizing cases}
       end;                             {end of not still in window startup phase}
@@ -428,10 +454,11 @@ winmsg_syskeydown_k: begin
     goto default_action;               {let system handle in standard way}
     end;
 
-  if                                   {ENTER key close window request ?}
+  if                                   {just ENTER key ?}
       (wparam = ord(winkey_return_k)) and {ENTER key ?}
       (msgid = winmsg_keydown_k)       {ALT modifier not active ?}
       then begin
+    if rend_stdin_enabled then goto noclose; {ENTER ends STDIN line ?}
     if (rend_evdev_key_k in rend_device[dev_id].ev_req) then begin {kbd events on ?}
       key_p := dev[dev_id].keyp[wparam]; {get pointer to RENDlib key descriptor}
       if                               {this key enabled for events ?}
@@ -440,52 +467,65 @@ winmsg_syskeydown_k: begin
           key_p^.req                   {events for this key are enabled ?}
         then goto noclose;
       end;
-    goto close_user;                   {interpret this key as CLOSE_USER event}
+    {
+    *   This event meets all the criteria for ENTER being a close request.
+    }
+    rev.dev := dev_id;                 {fill in event}
+    rev.ev_type := rend_ev_close_user_k;
+    rend_event_enqueue (rev);          {send the event}
+    goto done_message;
     end;                               {done checking for ENTER key special case}
 
-  goto noclose;                        {no special CLOSE_USER case found}
-
-close_user:                            {jump here to generate CLOSE_USER event}
-  ev.dev := dev_id;                    {fill in Win driver event descriptor}
-  ev.id := event_close_user_k;
-  rend_win_event (ev);                 {send the event}
-  goto done_message;                   {done handling this incoming message}
-
-noclose:                               {skip to here if not CLOSE_USER event}
+noclose:                               {this key press in not a close request}
+  down := true;                        {indicate this is a key press, not release}
+  vk := wparam;                        {virtual key code for this key}
+  coor32 := GetMessagePos;             {get cursor position during keyboard event}
+  x := coor32.x - dev[dev_id].pos_x;
+  y := coor32.y - dev[dev_id].pos_y;
 {
-*   Done checking for CLOSE_USER event.
+*   Common code to send a key event, if enabled.  The following state must
+*   already be set:
+*
+*     DEV_ID  -  RENDlib device ID.
+*
+*     DOWN  -  Indicates key up or down.
+*
+*     VK  -  Virtual key code.
+*
+*     X,Y  -  Window coordinate of this event.
 }
+key_send:                              {send KEY event if enabled}
+  send_pnt_move (x, y);                {update pointer position if changed}
+
   if not (rend_evdev_key_k in rend_device[dev_id].ev_req) {key events disabled ?}
     then goto default_action;
-
-  key_p := dev[dev_id].keyp[wparam];   {get pointer to RENDlib key descriptor}
+  key_p := dev[dev_id].keyp[vk];       {get pointer to RENDlib key descriptor}
   if key_p = nil then goto default_action; {no associated RENDlib key ?}
   if key_p^.id = rend_key_none_k then goto default_action; {RENDlib key desc empty ?}
   if not key_p^.req then goto default_action; {events disabled for this key ?}
 
-  ev.dev := dev_id;                    {fill in Win driver event descriptor}
-  ev.id := event_keydown_k;            {set event ID}
-  ev.keydown_p := key_p;               {pointer to RENDlib key descriptor}
-  coor32 := GetMessagePos;             {get cursor position during keyboard event}
-  ev.keydown_x := coor32.x - dev[dev_id].pos_x; {make cursor pos within window}
-  ev.keydown_y := coor32.y - dev[dev_id].pos_y;
-  ev.keydown_cnt := lparam & 16#FFFF;  {repeat count}
-  send_pnt_move (ev.keydown_x, ev.keydown_y); {send PNT_MOVE event if appropriate}
-{
-*   Common code to set the KEYDOWN_FLAGS field in the KEYDOWN event.
-}
-key_flags_down:
-  ev.keydown_flags := [];              {init flags to all off}
-  if (GetKeyState(ord(winkey_shift_k)) & 16#8000) <> 0
-    then ev.keydown_flags := ev.keydown_flags + [keydown_shift_k];
-  if (GetKeyState(ord(winkey_capital_k)) & 1) <> 0
-    then ev.keydown_flags := ev.keydown_flags + [keydown_capslock_k];
-  if (GetKeyState(ord(winkey_control_k)) & 16#8000) <> 0
-    then ev.keydown_flags := ev.keydown_flags + [keydown_ctrl_k];
-  if msgid = winmsg_syskeydown_k
-    then ev.keydown_flags := ev.keydown_flags + [keydown_alt_k];
+  rev.dev := dev_id;                   {fill in the event except for modifiers}
+  rev.ev_type := rend_ev_key_k;
+  rev.key.down := down;
+  rev.key.key_p := key_p;
+  rev.key.x := x;
+  rev.key.y := y;
 
-  rend_win_event (ev);                 {send the event}
+  rev.key.modk := [];                  {init to no modifiers active}
+  if (GetKeyState(ord(winkey_shift_k)) & 16#8000) <> 0
+    then rev.key.modk := rev.key.modk + [rend_key_mod_shift_k];
+  if (GetKeyState(ord(winkey_capital_k)) & 1) <> 0
+    then rev.key.modk := rev.key.modk + [rend_key_mod_shiftlock_k];
+  if (GetKeyState(ord(winkey_control_k)) & 16#8000) <> 0
+    then rev.key.modk := rev.key.modk + [rend_key_mod_ctrl_k];
+  if
+      (msgid = winmsg_syskeydown_k) or
+      (msgid = winmsg_syskeyup_k)
+      then begin
+    rev.key.modk := rev.key.modk + [rend_key_mod_alt_k];
+    end;
+
+  rend_event_enqueue (rev);            {send the event}
   end;
 {
 **********
@@ -495,36 +535,12 @@ key_flags_down:
 winmsg_keyup_k,
 winmsg_syskeyup_k: begin
   set_dev;                             {determine RENDlib device ID}
-
-  if not (rend_evdev_key_k in rend_device[dev_id].ev_req) {key messages disabled ?}
-    then goto default_action;
-  key_p := dev[dev_id].keyp[wparam];   {get pointer to RENDlib key descriptor}
-  if key_p = nil then goto default_action; {no associated RENDlib key ?}
-  if key_p^.id = rend_key_none_k then goto default_action; {RENDlib key desc empty ?}
-  if not key_p^.req then goto default_action; {events disabled for this key ?}
-
-  ev.dev := dev_id;                    {fill in Win driver event descriptor}
-  ev.id := event_keyup_k;              {set event ID}
-  ev.keyup_p := key_p;                 {pointer to RENDlib key descriptor}
+  down := false;                       {indicate this is a key release, not press}
+  vk := wparam;                        {virtual key code for this key}
   coor32 := GetMessagePos;             {get cursor position during keyboard event}
-  ev.keyup_x := coor32.x - dev[dev_id].pos_x; {make cursor pos within window}
-  ev.keyup_y := coor32.y - dev[dev_id].pos_y;
-  send_pnt_move (ev.keyup_x, ev.keyup_y); {send PNT_MOVE event if appropriate}
-{
-*   Common code to set the KEYUP_FLAGS field in the KEYUP event.
-}
-key_flags_up:
-  ev.keyup_flags := [];                {init flags to all off}
-  if (GetKeyState(ord(winkey_shift_k)) & 16#8000) <> 0
-    then ev.keyup_flags := ev.keyup_flags + [keydown_shift_k];
-  if (GetKeyState(ord(winkey_capital_k)) & 1) <> 0
-    then ev.keyup_flags := ev.keyup_flags + [keydown_capslock_k];
-  if (GetKeyState(ord(winkey_control_k)) & 16#8000) <> 0
-    then ev.keyup_flags := ev.keyup_flags + [keydown_ctrl_k];
-  if msgid = winmsg_syskeyup_k
-    then ev.keydown_flags := ev.keydown_flags + [keydown_alt_k];
-
-  rend_win_event (ev);                 {send the event}
+  x := coor32.x - dev[dev_id].pos_x;
+  y := coor32.y - dev[dev_id].pos_y;
+  goto key_send;
   end;
 {
 **********
@@ -583,35 +599,7 @@ mouse_button:
     ;
 
   lparam_xy (lparam, x, y);            {get coordinates of this event}
-  send_pnt_move (x, y);                {send PNT_MOVE event if appropriate}
-
-  if not (rend_evdev_key_k in rend_device[dev_id].ev_req) {key events disabled ?}
-    then goto default_action;
-
-  key_p := dev[dev_id].keyp[vk];       {get pointer to RENDlib key descriptor}
-  if key_p = nil then goto default_action; {no associated RENDlib key ?}
-  if key_p^.id = rend_key_none_k then goto default_action; {RENDlib key desc empty ?}
-  if not key_p^.req then goto default_action; {events disabled for this key ?}
-
-  ev.dev := dev_id;                    {fill in Win driver event descriptor}
-
-  if down
-    then begin                         {this event is for a key press}
-      ev.id := event_keydown_k;        {set event ID}
-      ev.keydown_p := key_p;           {pointer to RENDlib key descriptor}
-      ev.keydown_x := x;
-      ev.keydown_y := y;
-      ev.keydown_cnt := 1;
-      goto key_flags_down;             {set FLAGS and finish handling event}
-      end
-    else begin                         {this event if for a key release}
-      ev.id := event_keyup_k;          {set event ID}
-      ev.keyup_p := key_p;             {pointer to RENDlib key descriptor}
-      ev.keyup_x := x;
-      ev.keyup_y := y;
-      goto key_flags_up;               {set FLAGS and finish handling event}
-      end
-    ;
+  goto key_send;
   end;
 {
 **********
@@ -648,10 +636,10 @@ winmsg_mousewheel_k: begin
   dev[dev_id].scrollv :=               {remove scroll delta that will be reported}
     dev[dev_id].scrollv - (y * win_mousewheel_inc_k);
 
-  ev.dev := dev_id;                    {fill in our event descriptor}
-  ev.id := event_scrollv_k;
-  ev.scrollv_nup := y;
-  rend_win_event (ev);                 {send the event}
+  rev.dev := dev_id;                   {device this event belongs to}
+  rev.ev_type := rend_ev_scrollv_k;    {vertical scroll}
+  rev.scrollv.n := y;                  {scroll amount}
+  rend_event_enqueue (rev);            {send the event}
   end;
 {
 **********
@@ -681,13 +669,14 @@ winmsg_paint_k: begin
       (rend_evdev_wiped_rect_k in rend_device[dev_id].ev_req) and
       dev[dev_id].ready
       then begin
-    ev.dev := dev_id;                  {fill in event descriptor}
-    ev.id := event_rect_k;
-    ev.rect_x := paint.dirty.lft;
-    ev.rect_y := paint.dirty.top;
-    ev.rect_dx := paint.dirty.rit - paint.dirty.lft + 1;
-    ev.rect_dy := paint.dirty.bot - paint.dirty.top + 1;
-    rend_win_event (ev);               {send the event}
+    rev.dev := dev_id;                 {fill in event descriptor}
+    rev.ev_type := rend_ev_wiped_rect_k;
+    rev.wiped_rect.bufid := rend_curr_disp_buf; {indicate which buffer got hit}
+    rev.wiped_rect.x := paint.dirty.lft; {set rectangle position and size}
+    rev.wiped_rect.y := paint.dirty.top;
+    rev.wiped_rect.dx := paint.dirty.rit - paint.dirty.lft + 1;
+    rev.wiped_rect.dy := paint.dirty.bot - paint.dirty.top + 1;
+    rend_event_enqueue (rev);          {send the event}
     end;
 
   dev[dev_id].ready := true;           {indicate window is now ready for drawing}
@@ -709,9 +698,9 @@ winmsg_close_k: begin
   if                                   {CLOSE_USER events are enabled ?}
       (rend_evdev_close_k in rend_device[dev_id].ev_req)
       then begin
-    ev.dev := dev_id;                  {fill in event descriptor}
-    ev.id := event_close_user_k;       {WIN driver event ID}
-    rend_win_event (ev);               {send the event}
+    rev.dev := dev_id;
+    rev.ev_type := rend_ev_close_user_k;
+    rend_event_enqueue (rev);          {send the event}
     end;
   end;
 {
@@ -725,9 +714,9 @@ winmsg_destroy_k: begin
   if                                   {app wants to know when window goes away ?}
       (rend_evdev_close_k in rend_device[dev_id].ev_req)
       then begin
-    ev.dev := dev_id;                  {fill in event descriptor}
-    ev.id := event_closed_k;
-    rend_win_event (ev);               {send the event}
+    rev.dev := dev_id;
+    rev.ev_type := rend_ev_close_k;
+    rend_event_enqueue (rev);          {send the event}
     end;
 
   PostQuitMessage (0);                 {indicate to terminate window thread}

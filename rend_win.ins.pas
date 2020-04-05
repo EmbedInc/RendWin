@@ -5,8 +5,6 @@
 %include 'win.ins.pas';
 
 const
-  eventq_size_k = 100;                 {total number of slots in event queue}
-  eventq_last_k = eventq_size_k - 1;   {last valid EVENTQ entry}
   x_dith_k = 4;                        {horizontal size of dither pattern}
   y_dith_k = 4;                        {vertical size of dither pattern}
   frac_high_k = 1024;                  {FRAC value to indicate DITH_HIGH value}
@@ -70,67 +68,6 @@ type
       array[0..255]                    {one entry for each Windows virtual key code}
       of rend_key_p_t;                 {may be NIL if no such key}
     scrollv: sys_int_machine_t;        {accumulated but unsent vertical scroll increment}
-    end;
-
-  event_k_t = (                        {list of our internal event IDs}
-    event_none_k,                      {used to indicate no event present}
-    event_close_user_k,                {user has requested the window be closed}
-    event_closed_k,                    {the window has been closed}
-    event_keydown_k,                   {a key was pressed}
-    event_keyup_k,                     {a key was released}
-    event_size_k,                      {window size changed}
-    event_rect_k,                      {a rectangle needs repainting}
-    event_penter_k,                    {pointer entered window}
-    event_pexit_k,                     {pointer left window}
-    event_pmove_k,                     {pointer location changed}
-    event_scrollv_k);                  {vertical scroll}
-
-  keydown_k_t = (                      {additional flags for KEY_DOWN event}
-    keydown_shift_k,                   {SHIFT was down}
-    keydown_capslock_k,                {CAPS LOCK was active}
-    keydown_ctrl_k,                    {control key was also pressed}
-    keydown_alt_k);                    {ALT key was also pressed}
-  keydown_t = set of keydown_k_t;
-
-  event_t = record                     {info about each possible event}
-    dev: rend_dev_id_t;                {ID of device that received the event}
-    id: event_k_t;                     {ID of this event}
-    case event_k_t of                  {additional event-specific information}
-event_none_k: (                        {used to indicate no event present}
-      );
-event_close_user_k: (                  {the user wants the window closed}
-      );
-event_closed_k: (                      {then window has been closed}
-      );
-event_keydown_k: (                     {a key was pressed}
-      keydown_p: rend_key_p_t;         {pointer to RENDlib key descriptor}
-      keydown_x, keydown_y: sys_int_machine_t; {pointer coordinates during event}
-      keydown_cnt: 0..65535;           {total key presses due to auto repeat}
-      keydown_flags: keydown_t;        {additional modifier flags}
-      );
-event_keyup_k: (                       {a key was released}
-      keyup_p: rend_key_p_t;           {pointer to RENDlib key descriptor}
-      keyup_x, keyup_y: sys_int_machine_t; {pointer coordinates during event}
-      keyup_flags: keydown_t;          {additional modifier flags}
-      );
-event_size_k: (                        {window size changed}
-      );
-event_rect_k: (                        {a rectangle needs repainting}
-      rect_x, rect_y: sys_int_machine_t; {top left pixel inside effected rectangle}
-      rect_dx, rect_dy: sys_int_machine_t; {size of rectangle}
-      );
-event_penter_k: (                      {pointer entered window}
-      penter_x, penter_y: sys_int_machine_t; {pointer coordinate}
-      );
-event_pexit_k: (                       {pointer left window}
-      pexit_x, pexit_y: sys_int_machine_t; {pointer coordinate}
-      );
-event_pmove_k: (                       {pointer location changed}
-      pmove_x, pmove_y: sys_int_machine_t; {pointer coordinate}
-      );
-event_scrollv_k: (                     {vertical scroll}
-      scrollv_nup: sys_int_machine_t;  {number of increments up}
-      );
     end;
 
   pixform_k_t = (                      {our ID for the Windows pixel format type}
@@ -220,10 +157,6 @@ var (rend_win)
 *   General driver routines that are not installed in one of the various
 *   RENDlib call tables.
 }
-procedure rend_win_event (             {process a Windows event}
-  in      wev: event_t);               {new Windows event}
-  val_param; extern;
-
 procedure rend_win_init (              {device is a window in Microsoft Windows}
   in      dev_name: univ string_var_arg_t; {RENDlib inherent device name}
   in      parms: univ string_var_arg_t; {parameters passed from application}

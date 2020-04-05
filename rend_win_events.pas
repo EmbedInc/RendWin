@@ -1,256 +1,9 @@
 {   Module of routines for handling events in the Windows driver.
 }
 module rend_win_event;
-define rend_win_event;
 define rend_win_keys_init;
 %include 'rend_win.ins.pas';
 %include 'win_keys.ins.pas';
-{
-********************************************************************************
-*
-*   Subroutine REND_WIN_EVENT (WEV)
-*
-*   Process the Windows event WEV, and possibly create RENDlib events as a
-*   result.
-*
-*   This routine is really part of each window procedure.  It is in a separate
-*   module for easier maintainance.  REND_WIN_EVENT is only called from a
-*   window procedure in response to certain window messages.
-}
-procedure rend_win_event (             {process a Windows event}
-  in      wev: event_t);               {new Windows event}
-  val_param;
-
-const
-  max_msg_parms = 1;                   {max parameters we can pass to a message}
-
-var
-  rev: rend_event_t;                   {RENDlib event descriptor}
-  dev_id: sys_int_machine_t;           {RENDlib device ID which event is from}
-  x, y: sys_int_machine_t;             {scratch coordinates}
-  msg_parm:                            {parameter references for messages}
-    array[1..max_msg_parms] of sys_parm_msg_t;
-
-begin
-  dev_id := wev.dev;                   {fetch RENDlib ID of event device}
-  if not rend_device[dev_id].open then return; {device closed ?}
-  rev.dev := dev_id;                   {init RENDlib event descriptor target device}
-  rev.ev_type := rend_ev_none_k;       {init to no RENDlib event generated}
-
-  case wev.id of                       {which WIN event is it ?}
-{
-****************************************
-*
-*   The user wants the window closed.
-}
-event_close_user_k: begin
-  if                                   {we care about window closing ?}
-      rend_evdev_close_k in rend_device[dev_id].ev_req
-      then begin
-    rev.ev_type := rend_ev_close_user_k; {fill in RENDlib event descriptor}
-    end;
-  end;
-{
-****************************************
-*
-*   The window has been closed.
-}
-event_closed_k: begin                  {the window has been closed}
-  if                                   {we care about window closing ?}
-      rend_evdev_close_k in rend_device[dev_id].ev_req
-      then begin
-    rev.ev_type := rend_ev_close_k;    {fill in RENDlib event descriptor}
-    end;
-  end;
-{
-****************************************
-*
-*   A key has been pressed, or an additional key make was created by the
-*   keyboard auto-repeat feature.
-}
-event_keydown_k: begin                 {a key was pressed}
-  rend_pointer.x := wev.keydown_x;
-  rend_pointer.y := wev.keydown_y;
-
-  if not (rend_evdev_key_k in rend_device[dev_id].ev_req) {key events disabled ?}
-    then return;
-  if wev.keydown_p^.id = rend_key_none_k {RENDlib key descriptor is empty ?}
-    then return;
-  if not wev.keydown_p^.req            {events for this key are disabled ?}
-    then return;
-
-  rev.ev_type := rend_ev_key_k;        {this is a keyboard event}
-  rev.key.down := true;                {key press, as apposed to release}
-  rev.key.key_p := wev.keydown_p;      {pointer to RENDlib key descriptor}
-  rev.key.x := wev.keydown_x;          {pointer coordinate when key hit}
-  rev.key.y := wev.keydown_y;
-  rev.key.modk := [];                  {init all modifiers to not asserted}
-  if keydown_shift_k in wev.keydown_flags
-    then rev.key.modk := rev.key.modk + [rend_key_mod_shift_k];
-  if keydown_capslock_k in wev.keydown_flags
-    then rev.key.modk := rev.key.modk + [rend_key_mod_shiftlock_k];
-  if keydown_ctrl_k in wev.keydown_flags
-    then rev.key.modk := rev.key.modk + [rend_key_mod_ctrl_k];
-  if keydown_alt_k in wev.keydown_flags
-    then rev.key.modk := rev.key.modk + [rend_key_mod_alt_k];
-  end;
-{
-****************************************
-*
-*   A key has been released.
-}
-event_keyup_k: begin                   {a key was released}
-  rend_pointer.x := wev.keyup_x;
-  rend_pointer.y := wev.keyup_y;
-
-  if not (rend_evdev_key_k in rend_device[dev_id].ev_req) {key events disabled ?}
-    then return;
-  if wev.keyup_p^.id = rend_key_none_k {RENDlib key descriptor is empty ?}
-    then return;
-  if not wev.keyup_p^.req              {events for this key are disabled ?}
-    then return;
-
-  rev.ev_type := rend_ev_key_k;        {this is a keyboard event}
-  rev.key.down := false;               {key release, as apposed to press}
-  rev.key.key_p := wev.keyup_p;        {pointer to RENDlib key descriptor}
-  rev.key.x := wev.keyup_x;            {pointer coordinate when key hit}
-  rev.key.y := wev.keyup_y;
-  rev.key.modk := [];                  {init all modifiers to not asserted}
-  if keydown_shift_k in wev.keyup_flags
-    then rev.key.modk := rev.key.modk + [rend_key_mod_shift_k];
-  if keydown_capslock_k in wev.keyup_flags
-    then rev.key.modk := rev.key.modk + [rend_key_mod_shiftlock_k];
-  if keydown_ctrl_k in wev.keyup_flags
-    then rev.key.modk := rev.key.modk + [rend_key_mod_ctrl_k];
-  if keydown_alt_k in wev.keyup_flags
-    then rev.key.modk := rev.key.modk + [rend_key_mod_alt_k];
-  end;
-{
-****************************************
-*
-*   The window size has changed.
-}
-event_size_k: begin                    {window size changed}
-  EnterCriticalSection (crsect_dev);   {this access to DEV must be atomic}
-  x := dev[dev_id].size_x;
-  y := dev[dev_id].size_y;
-  LeaveCriticalSection (crsect_dev);
-
-  if                                   {nothing really changed ?}
-      (rend_image.x_size = x) and
-      (rend_image.y_size = y)
-      then begin
-    return;                            {ignore if we already know about new size}
-    end;
-
-  rend_set.dev_reconfig^;              {reconfigure driver to new size}
-
-  if                                   {we want to know about resize directly ?}
-      rend_evdev_resize_k in rend_device[dev_id].ev_req
-      then begin
-    rev.ev_type := rend_ev_resize_k;
-    rend_event_enqueue (rev);          {enqueue the RENDlib event}
-    rev.ev_type := rend_ev_none_k;     {reset to no pending unsent event}
-    end;
-
-  if                                   {merge resize with wiped rect ?}
-      rend_evdev_wiped_resize_k in rend_device[dev_id].ev_req
-      then begin
-    rev.ev_type := rend_ev_wiped_resize_k;
-    end;
-  end;
-{
-****************************************
-*
-*   A rectangular region of the window got wiped out, and is now ready to be
-*   redrawn.
-}
-event_rect_k: begin                    {a rectangle needs repainting}
-  if                                   {we care about dirty rectangles ?}
-      rend_evdev_wiped_rect_k in rend_device[dev_id].ev_req
-      then begin
-    rev.ev_type := rend_ev_wiped_rect_k;
-    rev.wiped_rect.bufid := rend_curr_disp_buf; {indicate which buffer got hit}
-    rev.wiped_rect.x := wev.rect_x;    {set rectangle position and size}
-    rev.wiped_rect.y := wev.rect_y;
-    rev.wiped_rect.dx := wev.rect_dx;
-    rev.wiped_rect.dy := wev.rect_dy;
-    end;
-  end;
-{
-****************************************
-*
-*   The pointer entered the window.
-}
-event_penter_k: begin
-  rend_pointer.x := wev.penter_x;
-  rend_pointer.y := wev.penter_y;
-
-  if                                   {we care about pointer entering ?}
-      rend_evdev_pnt_k in rend_device[dev_id].ev_req
-      then begin
-    rev.ev_type := rend_ev_pnt_enter_k; {fill in RENDlib event descriptor}
-    rev.pnt_enter.x := wev.penter_x;
-    rev.pnt_enter.y := wev.penter_y;
-    end;
-  end;
-{
-****************************************
-*
-*   The pointer left the window.
-}
-event_pexit_k: begin
-  rend_pointer.x := wev.pexit_x;
-  rend_pointer.y := wev.pexit_y;
-
-  if                                   {we care about pointer leaving ?}
-      rend_evdev_pnt_k in rend_device[dev_id].ev_req
-      then begin
-    rev.ev_type := rend_ev_pnt_exit_k; {fill in RENDlib event descriptor}
-    rev.pnt_exit.x := wev.pexit_x;
-    rev.pnt_exit.y := wev.pexit_y;
-    end;
-  end;
-{
-****************************************
-*
-*   The pointer moved.
-}
-event_pmove_k: begin
-  rend_pointer.x := wev.pmove_x;
-  rend_pointer.y := wev.pmove_y;
-
-  if                                   {we care about the pointer moving ?}
-      rend_evdev_pnt_k in rend_device[dev_id].ev_req
-      then begin
-    discard( rend_event_pointer_move ( {let RENDlib handle the pointer motion}
-      dev_id,                          {ID of RENDlib device for which pointer moved}
-      wev.pmove_x, wev.pmove_y) );     {new pointer coordinate}
-    end;
-  end;
-{
-****************************************
-*
-*   The user wants to vertically scroll.
-}
-event_scrollv_k: begin
-  rev.ev_type := rend_ev_scrollv_k;    {fill in RENDlib event descriptor}
-  rev.scrollv.n := wev.scrollv_nup;
-  end;
-{
-****************************************
-*
-*   Unrecognized internal event ID.
-}
-otherwise
-    sys_msg_parm_int (msg_parm[1], ord(wev.id));
-    rend_message_bomb ('rend_win', 'event_unrecognized', msg_parm, 1);
-    end;                               {end of WIN driver event cases}
-
-  if rev.ev_type <> rend_ev_none_k then begin {we have an event to send to RENDlib ?}
-    rend_event_enqueue (rev);          {enqueue the RENDlib event}
-    end;
-  end;
 {
 ********************************************************************************
 *
@@ -267,7 +20,7 @@ procedure get_key_val (                {get key value string}
   in      sc: sys_int_machine_t;       {Windows key scan code}
   in      kb: keyboard_state_t;        {indicates state of all keyboard keys}
   out     str_p: univ string_var_p_t); {returned pnt to string or NIL}
-  val_param;
+  val_param; internal;
 
 var
   s: string_var80_t;                   {local var string}
@@ -312,7 +65,7 @@ procedure set_spkey (                  {set RENDlib special key info}
   in      wk: winkey_k_t;              {Windows virtual key ID}
   in      rk: rend_key_sp_k_t;         {RENDlib special key ID}
   in      det: sys_int_machine_t);     {detail info for the RENDlib special key}
-  val_param;
+  val_param; internal;
 
 var
   k_p: rend_key_p_t;                   {pointer to RENDlib key descriptor}
@@ -334,7 +87,7 @@ begin
 }
 procedure show_key (                   {show RENDlib key info}
   in      vk: sys_int_machine_t);      {Windows virtual key code}
-  val_param;
+  val_param; internal;
 
 var
   k_p: rend_key_p_t;                   {pointer to RENDlib key descriptor}
@@ -414,7 +167,7 @@ begin
 procedure make_mouse_key (             {make sure mouse key exists}
   in      vk: winkey_k_t;              {Windows virtual key code of mouse key}
   in      det: sys_int_machine_t);     {RENDlib detail value for this special key}
-  val_param;
+  val_param; internal;
 
 var
   kn: sys_int_machine_t;               {RENDlib key ID}
