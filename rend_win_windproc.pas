@@ -624,6 +624,9 @@ winmsg_mousemove_k: begin
 winmsg_mousewheel_k: begin
   set_dev;                             {determine RENDlib device ID}
 
+  if not (rend_evdev_scroll_k in rend_device[dev_id].ev_req) {scroll events disabled ?}
+    then goto done_message;
+
   y := high16s (wparam);               {get scroll increment}
   dev[dev_id].scrollv :=               {accumulate unsent scroll delta}
     dev[dev_id].scrollv + y;

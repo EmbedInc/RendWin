@@ -28,6 +28,7 @@ rend_evdev_resize_k,                   {RESIZE events}
 rend_evdev_wiped_resize_k,             {WIPED_RESIZE compressed with WIPED_RECT}
 rend_evdev_wiped_rect_k,               {WIPED_RECT events}
 rend_evdev_key_k,                      {KEY events}
+rend_evdev_scroll_k,                   {scroll wheel movement}
 rend_evdev_pnt_k: begin                {PNT_ENTER, PNT_EXIT, PNT_MOVE events}
       rend_win_get_ev_possible := true;
       end;
